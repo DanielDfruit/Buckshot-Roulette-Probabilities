@@ -17,11 +17,12 @@ def simulate_buckshot_game_streamlit(
     rounds_list = []
     player_wins = 0
     dealer_wins = 0
+    game_lengths = []  # Collect game lengths
 
     # Simulate games and collect data for plotting
     for game_round in range(1, rounds + 1):
         # Run a single game
-        winner = simulate_single_game(
+        winner, game_length = simulate_single_game(
             live_shells,
             blank_shells,
             initial_player_lives,
@@ -35,6 +36,8 @@ def simulate_buckshot_game_streamlit(
         elif winner == 'dealer':
             dealer_wins += 1
 
+        game_lengths.append(game_length)  # Record game length
+
         # Record data every 10 rounds for smoother plots
         if game_round % 10 == 0:
             rounds_list.append(game_round)
@@ -42,7 +45,7 @@ def simulate_buckshot_game_streamlit(
             dealer_win_counts.append(dealer_wins / game_round * 100)
 
     # Return the collected data
-    return rounds_list, player_win_counts, dealer_win_counts, player_wins, dealer_wins
+    return rounds_list, player_win_counts, dealer_win_counts, player_wins, dealer_wins, game_lengths
 
 def simulate_single_game(
     live_shells,
@@ -58,8 +61,11 @@ def simulate_single_game(
     shells = []
     shell_index = 0  # Tracks the current shell
     turn = 'player'  # 'player' or 'dealer'
+    game_length = 0  # Counts the number of turns
 
     while player_lives > 0 and dealer_lives > 0:
+        game_length += 1  # Increment game length
+
         # Check if we need to reload the shotgun
         if shell_index >= len(shells):
             # Reload the shotgun
@@ -79,8 +85,7 @@ def simulate_single_game(
                     player_lives -= 1
                     turn = 'dealer'
                 else:
-                    # Player retains the turn
-                    pass
+                    pass  # Player retains the turn
             elif action == 'shoot_dealer':
                 if current_shell == 'live':
                     dealer_lives -= 1
@@ -97,8 +102,7 @@ def simulate_single_game(
                     dealer_lives -= 1
                     turn = 'player'
                 else:
-                    # Dealer retains the turn
-                    pass
+                    pass  # Dealer retains the turn
             elif action == 'shoot_player':
                 if current_shell == 'live':
                     player_lives -= 1
@@ -114,75 +118,72 @@ def simulate_single_game(
         if action in ['shoot_self', 'shoot_dealer', 'shoot_player']:
             shell_index += 1
 
-    # Determine the winner
+    # Determine the winner and return game length
     if player_lives <= 0:
-        return 'dealer'
+        return 'dealer', game_length
     elif dealer_lives <= 0:
-        return 'player'
+        return 'player', game_length
     else:
-        # This should not happen, but just in case
-        return 'draw'
+        return 'draw', game_length
 
-def player_aggressive_strategy(L, B, player_lives, dealer_lives):
-    return 'shoot_dealer'
+# Existing strategy functions...
 
-def player_conservative_strategy(L, B, player_lives, dealer_lives):
-    if (L + B) == 0:
-        return 'shoot_dealer'
-    p_blank = B / (L + B)
-    if p_blank > 0.7:
-        return 'shoot_self'
+# Add this new function for the probability evolution plot
+def simulate_single_game_with_probabilities(
+    live_shells,
+    blank_shells,
+    initial_player_lives,
+    initial_dealer_lives,
+    player_strategy,
+    dealer_strategy
+):
+    # Initialize game state
+    player_lives = initial_player_lives
+    dealer_lives = initial_dealer_lives
+    shells = []
+    shell_index = 0
+    turn = 'player'
+    game_length = 0
+    probabilities = []  # To record probabilities
+
+    while player_lives > 0 and dealer_lives > 0:
+        game_length += 1
+
+        if shell_index >= len(shells):
+            shells = ['live'] * live_shells + ['blank'] * blank_shells
+            np.random.shuffle(shells)
+            shell_index = 0
+
+        L = shells[shell_index:].count('live')
+        B = shells[shell_index:].count('blank')
+        current_shell = shells[shell_index]
+
+        # Record probabilities
+        total_shells = L + B
+        if total_shells > 0:
+            p_live = L / total_shells
+            p_blank = B / total_shells
+        else:
+            p_live = p_blank = 0
+        probabilities.append((p_live, p_blank))
+
+        # Rest of the game logic...
+        if turn == 'player':
+            action = player_strategy(L, B, player_lives, dealer_lives)
+            # Existing action handling...
+        elif turn == 'dealer':
+            action = dealer_strategy(L, B, dealer_lives, player_lives)
+            # Existing action handling...
+
+        # Update shell index and other variables as before...
+
+    # Return winner, game length, and probabilities
+    if player_lives <= 0:
+        return 'dealer', game_length, probabilities
+    elif dealer_lives <= 0:
+        return 'player', game_length, probabilities
     else:
-        return 'shoot_dealer'
-
-def player_probability_based_strategy(L, B, player_lives, dealer_lives):
-    if (L + B) == 0:
-        return 'shoot_dealer'
-    p_live = L / (L + B)
-    p_blank = B / (L + B)
-    if p_blank > p_live:
-        return 'shoot_self'
-    else:
-        return 'shoot_dealer'
-
-def dealer_aggressive_strategy(L, B, dealer_lives, player_lives):
-    return 'shoot_player'
-
-def dealer_conservative_strategy(L, B, dealer_lives, player_lives):
-    if (L + B) == 0:
-        return 'shoot_player'
-    p_blank = B / (L + B)
-    if p_blank > 0.7:
-        return 'shoot_self'
-    else:
-        return 'shoot_player'
-
-def dealer_probability_based_strategy(L, B, dealer_lives, player_lives):
-    if (L + B) == 0:
-        return 'shoot_player'
-    p_live = L / (L + B)
-    p_blank = B / (L + B)
-    if p_blank > p_live:
-        return 'shoot_self'
-    else:
-        return 'shoot_player'
-
-def dealer_random_strategy(L, B, dealer_lives, player_lives):
-    return np.random.choice(['shoot_self', 'shoot_player'])
-
-# Strategy descriptions
-player_strategy_descriptions = {
-    'Aggressive': 'Always shoot the Dealer.',
-    'Conservative': 'Shoot self when there is a high chance of drawing a blank shell; otherwise, shoot the Dealer.',
-    'Probability-Based': 'Decide based on the probabilities of live vs. blank shells. Shoot self if the chance of drawing a blank is higher.'
-}
-
-dealer_strategy_descriptions = {
-    'Aggressive': 'Always shoot the player.',
-    'Conservative': 'Shoot self when there is a high chance of drawing a blank shell; otherwise, shoot the player.',
-    'Probability-Based': 'Decide based on the probabilities of live vs. blank shells. Shoot self if the chance of drawing a blank is higher.',
-    'Random': 'Randomly choose to shoot self or the player.'
-}
+        return 'draw', game_length, probabilities
 
 # Streamlit App Code
 def main():
@@ -239,7 +240,7 @@ def main():
     # Run simulation when the button is clicked
     if st.button("Run Simulation"):
         with st.spinner('Simulating games...'):
-            rounds_list, player_win_counts, dealer_win_counts, player_wins, dealer_wins = simulate_buckshot_game_streamlit(
+            rounds_list, player_win_counts, dealer_win_counts, player_wins, dealer_wins, game_lengths = simulate_buckshot_game_streamlit(
                 rounds,
                 live_shells,
                 blank_shells,
@@ -249,7 +250,8 @@ def main():
                 dealer_strategy
             )
 
-        # Plot the results
+        # Plot the win rates
+        st.subheader("Win Rates Over Time")
         fig, ax = plt.subplots(figsize=(12, 6))
         ax.plot(rounds_list, player_win_counts, label='Player Win Rate')
         ax.plot(rounds_list, dealer_win_counts, label='Dealer Win Rate')
@@ -264,6 +266,66 @@ def main():
         st.subheader(f"Final Results after {rounds} rounds:")
         st.write(f"Player Win Rate: **{player_wins / rounds * 100:.2f}%**")
         st.write(f"Dealer Win Rate: **{dealer_wins / rounds * 100:.2f}%**")
+
+        # Plot game length distribution
+        st.subheader("Game Length Distribution")
+        fig2, ax2 = plt.subplots()
+        ax2.hist(game_lengths, bins=range(1, max(game_lengths)+2), edgecolor='black')
+        ax2.set_xlabel('Game Length (Number of Turns)')
+        ax2.set_ylabel('Frequency')
+        st.pyplot(fig2)
+
+        # Display average game length
+        avg_game_length = sum(game_lengths) / len(game_lengths)
+        st.write(f"Average Game Length: **{avg_game_length:.2f} turns**")
+
+    # Option to generate win rate heatmap
+    if st.checkbox("Generate Win Rate Heatmap (may take longer)"):
+        with st.spinner('Generating heatmap...'):
+            live_shell_range, blank_shell_range, win_rates = generate_win_rate_heatmap(
+                initial_player_lives,
+                initial_dealer_lives,
+                player_strategy,
+                dealer_strategy,
+                rounds_per_combination=100  # Adjust as needed
+            )
+
+        # Plot the heatmap
+        st.subheader("Win Rate Heatmap")
+        fig3, ax3 = plt.subplots()
+        c = ax3.imshow(win_rates, origin='lower', aspect='auto',
+                       extent=[min(blank_shell_range)-0.5, max(blank_shell_range)+0.5,
+                               min(live_shell_range)-0.5, max(live_shell_range)+0.5],
+                       cmap='viridis')
+        ax3.set_xlabel('Number of Blank Shells')
+        ax3.set_ylabel('Number of Live Shells')
+        fig3.colorbar(c, ax=ax3, label='Player Win Rate (%)')
+        st.pyplot(fig3)
+
+    # Option to run single game simulation and plot probabilities
+    if st.checkbox("Run Single Game Simulation and Plot Probabilities"):
+        with st.spinner('Simulating single game...'):
+            winner, game_length, probabilities = simulate_single_game_with_probabilities(
+                live_shells,
+                blank_shells,
+                initial_player_lives,
+                initial_dealer_lives,
+                player_strategy,
+                dealer_strategy
+            )
+
+        # Plot the probabilities
+        st.subheader("Probability Evolution During Single Game")
+        fig4, ax4 = plt.subplots()
+        turns = range(1, len(probabilities) + 1)
+        p_live = [p[0] for p in probabilities]
+        p_blank = [p[1] for p in probabilities]
+        ax4.plot(turns, p_live, label='Probability of Live Shell')
+        ax4.plot(turns, p_blank, label='Probability of Blank Shell')
+        ax4.set_xlabel('Turn')
+        ax4.set_ylabel('Probability')
+        ax4.legend()
+        st.pyplot(fig4)
 
 if __name__ == "__main__":
     main()
