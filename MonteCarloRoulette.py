@@ -354,7 +354,7 @@ def main():
         ax.set_yticklabels(pivot_table.index)
         for (i, j), z in np.ndenumerate(pivot_table.values):
             ax.text(j, i, f'{z:.1f}%', ha='center', va='center', color='white' if z < max_player_win_rate / 2 else 'black')
-         st.pyplot(fig)
+        st.pyplot(fig)
 
 
         # Highlight selected strategies on the plot
