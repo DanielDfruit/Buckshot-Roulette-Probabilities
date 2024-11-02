@@ -1,2 +1,2 @@
 # Buckshot-Roulette-Probabilities
-Buckshot Roulette, the indie game revolving around player choices within a  randomized game of "live" and "blank" chances, is a game really about probability. This repository models the simplest game form, akin to "level 1" within the game, although the application allows for customization not normally allowed in level 1.
+Buckshot Roulette is an indie game that revolves around player choices and the delicate balance of probability. In this version, we focus on the simplest form of the game—a head-to-head battle of wits and luck, similar to "Level 1" of the full version of the game.
