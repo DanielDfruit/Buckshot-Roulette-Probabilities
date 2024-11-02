@@ -170,6 +170,20 @@ def dealer_probability_based_strategy(L, B, dealer_lives, player_lives):
 def dealer_random_strategy(L, B, dealer_lives, player_lives):
     return np.random.choice(['shoot_self', 'shoot_player'])
 
+# Strategy descriptions
+player_strategy_descriptions = {
+    'Aggressive': 'Always shoot the Dealer.',
+    'Conservative': 'Shoot self when there is a high chance of drawing a blank shell; otherwise, shoot the Dealer.',
+    'Probability-Based': 'Decide based on the probabilities of live vs. blank shells. Shoot self if the chance of drawing a blank is higher.'
+}
+
+dealer_strategy_descriptions = {
+    'Aggressive': 'Always shoot the player.',
+    'Conservative': 'Shoot self when there is a high chance of drawing a blank shell; otherwise, shoot the player.',
+    'Probability-Based': 'Decide based on the probabilities of live vs. blank shells. Shoot self if the chance of drawing a blank is higher.',
+    'Random': 'Randomly choose to shoot self or the player.'
+}
+
 # Streamlit App Code
 def main():
     st.title("Buckshot Roulette Simulation")
@@ -194,11 +208,17 @@ def main():
         ("Aggressive", "Conservative", "Probability-Based")
     )
 
+    # Display the description for the selected player strategy
+    st.sidebar.write(f"**Description:** {player_strategy_descriptions[player_strategy_option]}")
+
     st.sidebar.header("Dealer Strategy")
     dealer_strategy_option = st.sidebar.selectbox(
         "Select Dealer Strategy",
         ("Aggressive", "Conservative", "Probability-Based", "Random")
     )
+
+    # Display the description for the selected dealer strategy
+    st.sidebar.write(f"**Description:** {dealer_strategy_descriptions[dealer_strategy_option]}")
 
     # Map strategy options to functions
     player_strategies = {
