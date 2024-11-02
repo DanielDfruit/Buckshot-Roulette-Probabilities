@@ -343,17 +343,19 @@ def main():
 
         # Plotting the results
         st.subheader("Win Rate Heatmap")
-        pivot_table = comparison_df.pivot("Player Strategy", "Dealer Strategy", "Player Win Rate")
+        pivot_table = comparison_df.pivot(index="Player Strategy", columns="Dealer Strategy", values="Player Win Rate")
 
         fig, ax = plt.subplots()
         cax = ax.matshow(pivot_table, cmap='viridis')
         fig.colorbar(cax)
-        ax.set_xticklabels([''] + list(pivot_table.columns))
-        ax.set_yticklabels([''] + list(pivot_table.index))
-        plt.xticks(rotation=90)
+        ax.set_xticks(range(len(pivot_table.columns)))
+        ax.set_yticks(range(len(pivot_table.index)))
+        ax.set_xticklabels(pivot_table.columns, rotation=90)
+        ax.set_yticklabels(pivot_table.index)
         for (i, j), z in np.ndenumerate(pivot_table.values):
             ax.text(j, i, f'{z:.1f}%', ha='center', va='center', color='white' if z < max_player_win_rate / 2 else 'black')
-        st.pyplot(fig)
+         st.pyplot(fig)
+
 
         # Highlight selected strategies on the plot
         st.write("**Note:** The selected player and Dealer strategies are highlighted on the heatmap.")
