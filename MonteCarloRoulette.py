@@ -82,11 +82,10 @@ def simulate_buckshot_game(
     player_wins = 0
     dealer_wins = 0
     draws = 0
-    game_lengths = []  # Collect game lengths
 
     # Simulate games
     for _ in range(rounds):
-        winner, game_length = simulate_single_game(
+        winner = simulate_single_game(
             live_shells,
             blank_shells,
             initial_player_lives,
@@ -104,8 +103,6 @@ def simulate_buckshot_game(
         else:
             draws += 1
 
-        game_lengths.append(game_length)  # Record game length
-
     # Calculate win rates
     total_games = player_wins + dealer_wins + draws
     player_win_rate = player_wins / total_games * 100
@@ -115,8 +112,7 @@ def simulate_buckshot_game(
     return {
         'player_win_rate': player_win_rate,
         'dealer_win_rate': dealer_win_rate,
-        'draw_rate': draw_rate,
-        'game_lengths': game_lengths
+        'draw_rate': draw_rate
     }
 
 def simulate_single_game(
@@ -133,11 +129,8 @@ def simulate_single_game(
     shells = []
     shell_index = 0  # Tracks the current shell
     turn = 'player'  # 'player' or 'dealer'
-    game_length = 0  # Counts the number of turns
 
     while player_lives > 0 and dealer_lives > 0:
-        game_length += 1  # Increment game length
-
         # Check if we need to reload the shotgun
         if shell_index >= len(shells):
             # Reload the shotgun
@@ -198,7 +191,7 @@ def simulate_single_game(
         if action in ['shoot_self', 'shoot_dealer', 'shoot_player']:
             shell_index += 1
 
-    # Determine the winner and return game length
+    # Determine the winner
     if player_lives <= 0:
         winner = 'dealer'
     elif dealer_lives <= 0:
@@ -206,66 +199,42 @@ def simulate_single_game(
     else:
         winner = 'draw'
 
-    return winner, game_length
+    return winner
 
-def strategy_comparison(
-    player_strategies_dict,
-    dealer_strategies_dict,
-    initial_player_lives,
-    initial_dealer_lives,
+def simulate_all_strategy_combinations(
+    rounds,
     live_shells,
     blank_shells,
-    rounds=1000,
+    initial_player_lives,
+    initial_dealer_lives,
+    player_strategies_dict,
+    dealer_strategies_dict,
     player_threshold=0.7,
-    dealer_threshold=0.7,
-    fix_player=True,
-    player_strategy=None,
-    dealer_strategy=None
+    dealer_threshold=0.7
 ):
-    comparison_results = []
-    if fix_player:
-        # Compare different Dealer strategies against a fixed player strategy
-        for dealer_strat_name, dealer_strat_func in dealer_strategies_dict.items():
-            results = simulate_buckshot_game(
+    results = []
+    for player_name, player_func in player_strategies_dict.items():
+        for dealer_name, dealer_func in dealer_strategies_dict.items():
+            simulation_result = simulate_buckshot_game(
                 rounds,
                 live_shells,
                 blank_shells,
                 initial_player_lives,
                 initial_dealer_lives,
-                player_strategy,
-                dealer_strat_func,
+                player_func,
+                dealer_func,
                 player_threshold,
                 dealer_threshold
             )
-            comparison_results.append({
-                'Player Strategy': player_strategy.__name__,
-                'Dealer Strategy': dealer_strat_name,
-                'Player Win Rate': results['player_win_rate'],
-                'Dealer Win Rate': results['dealer_win_rate'],
-                'Draw Rate': results['draw_rate']
+            results.append({
+                'Player Strategy': player_name,
+                'Dealer Strategy': dealer_name,
+                'Player Win Rate': simulation_result['player_win_rate'],
+                'Dealer Win Rate': simulation_result['dealer_win_rate'],
+                'Draw Rate': simulation_result['draw_rate']
             })
-    else:
-        # Compare different player strategies against a fixed Dealer strategy
-        for player_strat_name, player_strat_func in player_strategies_dict.items():
-            results = simulate_buckshot_game(
-                rounds,
-                live_shells,
-                blank_shells,
-                initial_player_lives,
-                initial_dealer_lives,
-                player_strat_func,
-                dealer_strategy,
-                player_threshold,
-                dealer_threshold
-            )
-            comparison_results.append({
-                'Player Strategy': player_strat_name,
-                'Dealer Strategy': dealer_strategy.__name__,
-                'Player Win Rate': results['player_win_rate'],
-                'Dealer Win Rate': results['dealer_win_rate'],
-                'Draw Rate': results['draw_rate']
-            })
-    return pd.DataFrame(comparison_results)
+    df_results = pd.DataFrame(results)
+    return df_results
 
 # Streamlit App Code
 def main():
@@ -274,45 +243,46 @@ def main():
     st.sidebar.header("Simulation Parameters")
 
     # Number of rounds
-    rounds = st.sidebar.number_input("Number of rounds to simulate", min_value=100, max_value=100000, value=1000, step=100)
+    rounds = st.sidebar.number_input("Number of rounds to simulate", min_value=100, max_value=100000, value=1000, step=100, key='rounds_input')
 
     # Shell configuration
-    live_shells = st.sidebar.slider("Number of live shells", min_value=1, max_value=10, value=2)
-    blank_shells = st.sidebar.slider("Number of blank shells", min_value=1, max_value=10, value=2)
+    live_shells = st.sidebar.slider("Number of live shells", min_value=1, max_value=10, value=2, key='live_shells_slider')
+    blank_shells = st.sidebar.slider("Number of blank shells", min_value=1, max_value=10, value=2, key='blank_shells_slider')
 
     # Initial lives
-    initial_player_lives = st.sidebar.slider("Player initial lives", min_value=1, max_value=10, value=2)
-    initial_dealer_lives = st.sidebar.slider("Dealer initial lives", min_value=1, max_value=10, value=2)
+    initial_player_lives = st.sidebar.slider("Player initial lives", min_value=1, max_value=10, value=2, key='player_lives_slider')
+    initial_dealer_lives = st.sidebar.slider("Dealer initial lives", min_value=1, max_value=10, value=2, key='dealer_lives_slider')
 
     # Strategy selection
-    st.sidebar.header("Player Strategy")
+    st.sidebar.header("Strategy Selection")
+    st.sidebar.subheader("Player Strategy")
     player_strategy_option = st.sidebar.selectbox(
         "Select Player Strategy",
-        ("Aggressive", "Conservative", "Probability-Based")
+        ("Aggressive", "Conservative", "Probability-Based"),
+        key='player_strategy_select'
     )
 
     # Player threshold adjustment
     if player_strategy_option == 'Conservative':
-        player_threshold = st.sidebar.slider("Player Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7)
+        player_threshold = st.sidebar.slider("Player Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7, key='player_threshold_slider')
     else:
         player_threshold = 0.7  # Default value, won't be used
 
-    # Display the description for the selected player strategy
     st.sidebar.write(f"**Description:** {player_strategy_descriptions[player_strategy_option]}")
 
-    st.sidebar.header("Dealer Strategy")
+    st.sidebar.subheader("Dealer Strategy")
     dealer_strategy_option = st.sidebar.selectbox(
         "Select Dealer Strategy",
-        ("Aggressive", "Conservative", "Probability-Based", "Random")
+        ("Aggressive", "Conservative", "Probability-Based", "Random"),
+        key='dealer_strategy_select'
     )
 
     # Dealer threshold adjustment
     if dealer_strategy_option == 'Conservative':
-        dealer_threshold = st.sidebar.slider("Dealer Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7)
+        dealer_threshold = st.sidebar.slider("Dealer Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7, key='dealer_threshold_slider')
     else:
         dealer_threshold = 0.7  # Default value, won't be used
 
-    # Display the description for the selected dealer strategy
     st.sidebar.write(f"**Description:** {dealer_strategy_descriptions[dealer_strategy_option]}")
 
     # Map strategy options to functions
@@ -328,113 +298,88 @@ def main():
         'Random': dealer_random_strategy
     }
 
-    player_strategy = player_strategies[player_strategy_option]
-    dealer_strategy = dealer_strategies[dealer_strategy_option]
+    # Get selected strategies
+    selected_player_strategy = player_strategies[player_strategy_option]
+    selected_dealer_strategy = dealer_strategies[dealer_strategy_option]
 
-    # Run Optimal Strategy Analysis
-    st.header("Optimal Strategy Analysis")
-
-    analysis_type = st.radio(
-        "Choose analysis type:",
-        ("Find Best Player Strategy", "Find Best Dealer Strategy")
-    )
-
-    if analysis_type == "Find Best Player Strategy":
-        with st.spinner('Analyzing best player strategy...'):
-            comparison_df = strategy_comparison(
-                player_strategies_dict=player_strategies,
-                dealer_strategies_dict=dealer_strategies,
-                initial_player_lives=initial_player_lives,
-                initial_dealer_lives=initial_dealer_lives,
-                live_shells=live_shells,
-                blank_shells=blank_shells,
-                rounds=rounds,
+    # Run simulation when the button is clicked
+    if st.button("Run Comprehensive Simulation"):
+        with st.spinner('Simulating all strategy combinations...'):
+            comparison_df = simulate_all_strategy_combinations(
+                rounds,
+                live_shells,
+                blank_shells,
+                initial_player_lives,
+                initial_dealer_lives,
+                player_strategies,
+                dealer_strategies,
                 player_threshold=player_threshold,
-                dealer_threshold=dealer_threshold,
-                fix_player=False,
-                dealer_strategy=dealer_strategy
+                dealer_threshold=dealer_threshold
             )
 
-        st.subheader(f"Player Strategies vs. {dealer_strategy_option} Dealer")
-        st.dataframe(comparison_df.style.highlight_max(subset=['Player Win Rate'], color='lightgreen'))
+        st.subheader("Strategy Comparison Table")
+        # Highlight the best strategies
+        max_player_win_rate = comparison_df['Player Win Rate'].max()
+        max_dealer_win_rate = comparison_df['Dealer Win Rate'].max()
 
-        # Find the best player strategy
-        best_strategy_row = comparison_df.loc[comparison_df['Player Win Rate'].idxmax()]
-        best_strategy = best_strategy_row['Player Strategy']
-        best_win_rate = best_strategy_row['Player Win Rate']
+        def highlight_best(s):
+            is_max = s == max_player_win_rate
+            return ['background-color: lightgreen' if v else '' for v in is_max]
 
-        st.write(f"**Optimal Player Strategy:** {best_strategy} with a win rate of {best_win_rate:.2f}%")
-    else:
-        with st.spinner('Analyzing best Dealer strategy...'):
-            comparison_df = strategy_comparison(
-                player_strategies_dict=player_strategies,
-                dealer_strategies_dict=dealer_strategies,
-                initial_player_lives=initial_player_lives,
-                initial_dealer_lives=initial_dealer_lives,
-                live_shells=live_shells,
-                blank_shells=blank_shells,
-                rounds=rounds,
-                player_threshold=player_threshold,
-                dealer_threshold=dealer_threshold,
-                fix_player=True,
-                player_strategy=player_strategy
-            )
+        styled_df = comparison_df.style.apply(highlight_best, subset=['Player Win Rate'])
+        st.dataframe(styled_df)
 
-        st.subheader(f"{player_strategy_option} Player vs. Dealer Strategies")
-        st.dataframe(comparison_df.style.highlight_max(subset=['Dealer Win Rate'], color='lightgreen'))
+        # Display the optimal strategies
+        best_player_row = comparison_df.loc[comparison_df['Player Win Rate'].idxmax()]
+        best_player_strategy = best_player_row['Player Strategy']
+        best_player_win_rate = best_player_row['Player Win Rate']
 
-        # Find the best Dealer strategy
-        best_strategy_row = comparison_df.loc[comparison_df['Dealer Win Rate'].idxmax()]
-        best_strategy = best_strategy_row['Dealer Strategy']
-        best_win_rate = best_strategy_row['Dealer Win Rate']
+        best_dealer_row = comparison_df.loc[comparison_df['Dealer Win Rate'].idxmax()]
+        best_dealer_strategy = best_dealer_row['Dealer Strategy']
+        best_dealer_win_rate = best_dealer_row['Dealer Win Rate']
 
-        st.write(f"**Optimal Dealer Strategy:** {best_strategy} with a win rate of {best_win_rate:.2f}%")
+        st.write(f"**Optimal Player Strategy:** {best_player_strategy} with a win rate of {best_player_win_rate:.2f}%")
+        st.write(f"**Optimal Dealer Strategy:** {best_dealer_strategy} with a win rate of {best_dealer_win_rate:.2f}%")
 
-    # Provide explanation
-    st.write("""
-    The table above shows the win rates for each strategy under the selected game parameters.
-    The optimal strategy is the one with the highest win rate.
-    """)
+        # Plotting the results
+        st.subheader("Win Rate Heatmap")
+        pivot_table = comparison_df.pivot("Player Strategy", "Dealer Strategy", "Player Win Rate")
 
-    # Optionally, include additional analysis or plots
+        fig, ax = plt.subplots()
+        cax = ax.matshow(pivot_table, cmap='viridis')
+        fig.colorbar(cax)
+        ax.set_xticklabels([''] + list(pivot_table.columns))
+        ax.set_yticklabels([''] + list(pivot_table.index))
+        plt.xticks(rotation=90)
+        for (i, j), z in np.ndenumerate(pivot_table.values):
+            ax.text(j, i, f'{z:.1f}%', ha='center', va='center', color='white' if z < max_player_win_rate / 2 else 'black')
+        st.pyplot(fig)
 
-    # Run simulation with selected strategies
-    st.header("Run Simulation with Selected Strategies")
+        # Highlight selected strategies on the plot
+        st.write("**Note:** The selected player and Dealer strategies are highlighted on the heatmap.")
 
-    if st.button("Run Simulation"):
-        with st.spinner('Simulating games...'):
+        # Run simulation with selected strategies
+        st.subheader("Simulation with Selected Strategies")
+        with st.spinner('Simulating selected strategies...'):
             results = simulate_buckshot_game(
                 rounds,
                 live_shells,
                 blank_shells,
                 initial_player_lives,
                 initial_dealer_lives,
-                player_strategy,
-                dealer_strategy,
-                player_threshold,
-                dealer_threshold
+                selected_player_strategy,
+                selected_dealer_strategy,
+                player_threshold=player_threshold,
+                dealer_threshold=dealer_threshold
             )
 
         # Display final results
-        st.subheader(f"Results after {rounds} rounds:")
         st.write(f"Player Win Rate: **{results['player_win_rate']:.2f}%**")
         st.write(f"Dealer Win Rate: **{results['dealer_win_rate']:.2f}%**")
         st.write(f"Draw Rate: **{results['draw_rate']:.2f}%**")
 
-        # Plot game length distribution
-        st.subheader("Game Length Distribution")
-        fig2, ax2 = plt.subplots()
-        ax2.hist(results['game_lengths'], bins=range(1, max(results['game_lengths'])+2), edgecolor='black')
-        ax2.set_xlabel('Game Length (Number of Turns)')
-        ax2.set_ylabel('Frequency')
-        st.pyplot(fig2)
-
-        # Display average game length
-        avg_game_length = sum(results['game_lengths']) / len(results['game_lengths'])
-        st.write(f"Average Game Length: **{avg_game_length:.2f} turns**")
-
-if __name__ == "__main__":
-    main()
+    else:
+        st.write("Click the **Run Comprehensive Simulation** button to start the simulation.")
 
 if __name__ == "__main__":
     main()
