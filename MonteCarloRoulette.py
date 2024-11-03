@@ -66,6 +66,8 @@ def simulate_game(shell_order, player_lives, dealer_lives, player_strategy, deal
     shell_index = 0
     current_turn = 'player'
 
+    game_log = []  # To keep track of each action and outcome
+
     while current_player_lives > 0 and current_dealer_lives > 0 and shell_index < len(shell_order):
         current_shell = shell_order[shell_index]
         L = shell_order[shell_index:].count('live')
@@ -74,26 +76,37 @@ def simulate_game(shell_order, player_lives, dealer_lives, player_strategy, deal
         if current_turn == 'player':
             action = player_strategy(L, B, current_player_lives, current_dealer_lives)
             if action == 'shoot_self':
-                current_player_lives -= 1 if current_shell == 'live' else 0
+                if current_shell == 'live':
+                    current_player_lives -= 1
+                game_log.append(f"Player shoots self with {'live' if current_shell == 'live' else 'blank'} shell")
             else:
-                current_dealer_lives -= 1 if current_shell == 'live' else 0
+                if current_shell == 'live':
+                    current_dealer_lives -= 1
+                game_log.append(f"Player shoots dealer with {'live' if current_shell == 'live' else 'blank'} shell")
             current_turn = 'dealer'
         else:
             action = dealer_strategy(L, B, current_dealer_lives, current_player_lives)
             if action == 'shoot_self':
-                current_dealer_lives -= 1 if current_shell == 'live' else 0
+                if current_shell == 'live':
+                    current_dealer_lives -= 1
+                game_log.append(f"Dealer shoots self with {'live' if current_shell == 'live' else 'blank'} shell")
             else:
-                current_player_lives -= 1 if current_shell == 'live' else 0
+                if current_shell == 'live':
+                    current_player_lives -= 1
+                game_log.append(f"Dealer shoots player with {'live' if current_shell == 'live' else 'blank'} shell")
             current_turn = 'player'
 
         shell_index += 1
 
     if current_player_lives <= 0:
-        return 'dealer'
+        game_log.append("Dealer wins")
+        return 'dealer', game_log
     elif current_dealer_lives <= 0:
-        return 'player'
+        game_log.append("Player wins")
+        return 'player', game_log
     else:
-        return 'draw'
+        game_log.append("Draw")
+        return 'draw', game_log
 
 # Main simulation loop
 def simulate_all_possible_games(
@@ -106,12 +119,14 @@ def simulate_all_possible_games(
 ):
     all_permutations = generate_all_permutations(live_shells, blank_shells)
     player_wins = dealer_wins = draws = 0
+    detailed_logs = []
 
     for shell_order in all_permutations:
-        result = simulate_game(
+        result, game_log = simulate_game(
             shell_order, initial_player_lives, initial_dealer_lives,
             player_strategy, dealer_strategy
         )
+        detailed_logs.append((shell_order, game_log))
         if result == 'player':
             player_wins += 1
         elif result == 'dealer':
@@ -128,7 +143,8 @@ def simulate_all_possible_games(
         'player_win_rate': player_win_rate,
         'dealer_win_rate': dealer_win_rate,
         'draw_rate': draw_rate,
-        'total_results': {'player_wins': player_wins, 'dealer_wins': dealer_wins, 'draws': draws}
+        'total_results': {'player_wins': player_wins, 'dealer_wins': dealer_wins, 'draws': draws},
+        'detailed_logs': detailed_logs
     }
 
 # Streamlit app
@@ -141,8 +157,8 @@ def main():
     blank_shells = st.sidebar.slider("Number of blank shells", min_value=1, max_value=max_shells - live_shells, value=2)
     total_shells = live_shells + blank_shells
 
-    initial_player_lives = st.sidebar.slider("Player initial lives", min_value=1, max_value=5, value=2)
-    initial_dealer_lives = st.sidebar.slider("Dealer initial lives", min_value=1, max_value=5, value=2)
+    initial_player_lives = st.sidebar.slider("Player initial lives", min_value=1, max_value=5, value=1)
+    initial_dealer_lives = st.sidebar.slider("Dealer initial lives", min_value=1, max_value=5, value=1)
 
     st.sidebar.header("Strategy Selection")
     player_strategy_option = st.sidebar.selectbox("Select Player Strategy", ("Aggressive", "Conservative", "Probability-Based"))
@@ -205,6 +221,13 @@ def main():
         st.write(f"Total Dealer Wins: **{results['total_results']['dealer_wins']}**")
         st.write(f"Total Draws: **{results['total_results']['draws']}**")
 
+        # Display detailed logs for each game
+        st.subheader("Detailed Game Outcomes")
+        for shell_order, log in results['detailed_logs']:
+            st.write(f"Shell Order: {shell_order}")
+            for entry in log:
+                st.write(entry)
+            st.write("---")
+
 if __name__ == "__main__":
     main()
-
