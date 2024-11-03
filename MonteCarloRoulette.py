@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from itertools import permutations
+from itertools import permutations, product
 
 # Strategy descriptions
 player_strategy_descriptions = {
@@ -69,6 +69,56 @@ def generate_all_permutations(live_shells, blank_shells):
 
 # Simulation functions
 
+def simulate_all_possible_turns(
+    shell_order,
+    player_lives,
+    dealer_lives,
+    player_strategy,
+    dealer_strategy,
+    player_threshold=0.7,
+    dealer_risk_tolerance=0.5,
+    dealer_caution_level=0.7,
+    dealer_bluff_factor=0.1
+):
+    """
+    Simulate all possible turn outcomes given a specific shell order.
+    """
+    scenarios = product(['player', 'dealer'], repeat=len(shell_order))  # All possible turn orders
+    results = []
+    
+    for scenario in scenarios:
+        current_player_lives = player_lives
+        current_dealer_lives = dealer_lives
+        shell_index = 0
+
+        for turn in scenario:
+            if current_player_lives <= 0 or current_dealer_lives <= 0 or shell_index >= len(shell_order):
+                break
+
+            current_shell = shell_order[shell_index]
+            L = shell_order[shell_index:].count('live')
+            B = shell_order[shell_index:].count('blank')
+
+            if turn == 'player':
+                action = player_strategy(L, B, current_player_lives, current_dealer_lives)
+                if action == 'shoot_self':
+                    current_player_lives -= 1 if current_shell == 'live' else 0
+                else:
+                    current_dealer_lives -= 1 if current_shell == 'live' else 0
+            else:
+                action = dealer_strategy(L, B, current_dealer_lives, current_player_lives, dealer_risk_tolerance, dealer_caution_level, dealer_bluff_factor)
+                if action == 'shoot_self':
+                    current_dealer_lives -= 1 if current_shell == 'live' else 0
+                else:
+                    current_player_lives -= 1 if current_shell == 'live' else 0
+
+            shell_index += 1
+
+        winner = 'dealer' if current_player_lives <= 0 else 'player' if current_dealer_lives <= 0 else 'draw'
+        results.append(winner)
+
+    return results
+
 def simulate_all_possible_games(
     live_shells,
     blank_shells,
@@ -85,16 +135,13 @@ def simulate_all_possible_games(
     player_wins = dealer_wins = draws = 0
 
     for shell_order in all_permutations:
-        winner, _ = simulate_single_game(
+        turn_results = simulate_all_possible_turns(
             shell_order, initial_player_lives, initial_dealer_lives,
             player_strategy, dealer_strategy, player_threshold, dealer_risk_tolerance, dealer_caution_level, dealer_bluff_factor
         )
-        if winner == 'player':
-            player_wins += 1
-        elif winner == 'dealer':
-            dealer_wins += 1
-        else:
-            draws += 1
+        player_wins += turn_results.count('player')
+        dealer_wins += turn_results.count('dealer')
+        draws += turn_results.count('draw')
 
     total_games = player_wins + dealer_wins + draws
     player_win_rate = player_wins / total_games * 100
@@ -107,48 +154,10 @@ def simulate_all_possible_games(
         'draw_rate': draw_rate
     }
 
-def simulate_single_game(
-    shell_order, player_lives, dealer_lives,
-    player_strategy, dealer_strategy, player_threshold=0.7,
-    dealer_risk_tolerance=0.5, dealer_caution_level=0.7, dealer_bluff_factor=0.1
-):
-    shell_index = 0
-    turn = 'player'
-    game_probabilities = []
-
-    while player_lives > 0 and dealer_lives > 0 and shell_index < len(shell_order):
-        current_shell = shell_order[shell_index]
-        L = shell_order[shell_index:].count('live')
-        B = shell_order[shell_index:].count('blank')
-        total_shells = L + B
-        p_live = L / total_shells if total_shells > 0 else 0
-        p_blank = B / total_shells if total_shells > 0 else 0
-        game_probabilities.append({'p_live': p_live, 'p_blank': p_blank})
-
-        if turn == 'player':
-            action = player_strategy(L, B, player_lives, dealer_lives) if player_strategy == player_conservative_strategy else player_strategy(L, B, player_lives, dealer_lives)
-            if action == 'shoot_self':
-                player_lives -= 1 if current_shell == 'live' else 0
-            else:
-                dealer_lives -= 1 if current_shell == 'live' else 0
-        else:
-            action = dealer_strategy(L, B, dealer_lives, player_lives, dealer_risk_tolerance, dealer_caution_level, dealer_bluff_factor)
-            if action == 'shoot_self':
-                dealer_lives -= 1 if current_shell == 'live' else 0
-            else:
-                player_lives -= 1 if current_shell == 'live' else 0
-
-        # Always switch turns after each shot
-        turn = 'dealer' if turn == 'player' else 'player'
-        shell_index += 1
-
-    winner = 'dealer' if player_lives <= 0 else 'player' if dealer_lives <= 0 else 'draw'
-    return winner, game_probabilities
-
 def main():
-    st.title("Buckshot Roulette Simulation with Exhaustive Permutations")
+    st.title("Buckshot Roulette Simulation with Exhaustive Permutations and Turns")
 
-    # Create tabs for simulation and rules
+    # Create tabs for simulation, rules, charts
     tab_simulation, tab_rules, tab_charts = st.tabs(["Simulation", "Rules", "Charts"])
 
     # Rules Tab Content
@@ -179,7 +188,7 @@ def main():
            - **Risk Tolerance**: Adjusts the Dealer’s aggressiveness based on relative lives. Higher values mean the Dealer will take more risks.
            - **Caution Level**: Dictates how likely the Dealer is to shoot themselves if there's a high chance of a blank shell.
            - **Bluff Factor**: Adds unpredictability by occasionally making the Dealer ignore probabilities and choose randomly.
-        """)
+        "")
 
     # Simulation Tab Content
     with tab_simulation:
@@ -230,14 +239,18 @@ def main():
         fixed_blank_shells = 2
         fixed_player_lives = 2
         fixed_dealer_lives = 2
-        win_rates = [
-            simulate_all_possible_games(
-                fixed_live_shells, fixed_blank_shells, fixed_player_lives, fixed_dealer_lives,
-                player_strategies[p], dealer_dynamic_strategy,
-                player_threshold, dealer_risk_tolerance, dealer_caution_level, dealer_bluff_factor
-            )['player_win_rate'] for p, d in strategy_combinations
-        ]
+        win_rates = []
 
+        # Calculate win rates for each strategy combination using fixed parameters
+        for p_strategy, d_strategy in strategy_combinations:
+            win_rate_result = simulate_all_possible_games(
+                fixed_live_shells, fixed_blank_shells, fixed_player_lives, fixed_dealer_lives,
+                player_strategies[p_strategy], dealer_dynamic_strategy,
+                player_threshold, dealer_risk_tolerance, dealer_caution_level, dealer_bluff_factor
+            )
+            win_rates.append(win_rate_result['player_win_rate'])
+
+        # Create DataFrame for heatmap
         heatmap_data = pd.DataFrame(
             np.array(win_rates).reshape(len(player_strategies), len(dealer_strategy_descriptions)),
             index=player_strategies.keys(),
@@ -248,7 +261,8 @@ def main():
         sns.heatmap(heatmap_data, annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
         ax.set_xlabel("Dealer Strategy")
         ax.set_ylabel("Player Strategy")
-        ax.set_title("Win Probability Heatmap for Player vs Dealer Strategies")
+        fig.patch.set_facecolor('white')  # Set background color for better visibility
+        ax.set_facecolor('white')
         st.pyplot(fig)
 
 if __name__ == "__main__":
