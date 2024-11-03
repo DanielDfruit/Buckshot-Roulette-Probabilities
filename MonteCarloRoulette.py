@@ -96,12 +96,15 @@ def dealer_probability_based_strategy(L, B, dealer_lives, player_lives):
     return 'shoot_self' if p_blank > p_live else 'shoot_player'
 
 # Generate all possible shell permutations
-def generate_all_permutations(live_shells, blank_shells):
+import random
+
+def generate_sample_permutations(live_shells, blank_shells, sample_size=100):
     shells = ['live'] * live_shells + ['blank'] * blank_shells
-    return list(set(permutations(shells)))  # Use set to avoid duplicate permutations
+    all_perms = list(set(permutations(shells)))
+    return random.sample(all_perms, min(sample_size, len(all_perms)))  # Use set to avoid duplicate permutations
 
 # Simulation functions
-def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy, dealer_strategy, graph, parent_node):
+def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy, dealer_strategy, graph, parent_node, results):
     current_player_lives = player_lives
     current_dealer_lives = dealer_lives
     shell_index = 0
@@ -145,10 +148,13 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
     result_node = f"{parent_node}-result"
     if current_player_lives <= 0:
         graph.add_node(result_node, label="Dealer Wins", color="red")
+        results['dealer_wins'] += 1
     elif current_dealer_lives <= 0:
         graph.add_node(result_node, label="Player Wins", color="green")
+        results['player_wins'] += 1
     else:
         graph.add_node(result_node, label="Draw", color="gray")
+        results['draws'] += 1
     
     graph.add_edge(parent_node, result_node)
 
@@ -156,9 +162,16 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
 def visualize_game_paths(graph):
     net = Network(notebook=False, height="750px", width="100%", cdn_resources='local')
     net.from_nx(graph)
-    net.write_html("game_paths.html")
-    # Display link to generated HTML in Streamlit
-    st.markdown(f"[View Game Paths](game_paths.html)", unsafe_allow_html=True)
+    output_path = "game_paths.html"
+    try:
+        net.write_html(output_path)
+        # Display link to generated HTML in Streamlit
+        if os.path.exists(output_path):
+            st.markdown(f"[View Game Paths]({output_path})", unsafe_allow_html=True)
+        else:
+            st.error("Failed to generate game paths visualization.")
+    except Exception as e:
+        st.error(f"Error generating visualization: {e}")
 
 # Main simulation loop
 def simulate_all_possible_games(
@@ -169,6 +182,8 @@ def simulate_all_possible_games(
     player_strategy,
     dealer_strategy
 ):
+    results = {'player_wins': 0, 'dealer_wins': 0, 'draws': 0}
+    all_permutations = generate_sample_permutations(live_shells, blank_shells)
     optimal_first_play = {}
     all_permutations = generate_all_permutations(live_shells, blank_shells)
     player_wins = dealer_wins = draws = 0
@@ -178,7 +193,7 @@ def simulate_all_possible_games(
     for shell_order in all_permutations:
         simulate_game_graph(
             shell_order, initial_player_lives, initial_dealer_lives,
-            player_strategy, dealer_strategy, graph, "root"
+            player_strategy, dealer_strategy, graph, "root", results
         )
 
     visualize_game_paths(graph)
