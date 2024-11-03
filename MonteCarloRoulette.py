@@ -126,8 +126,7 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
         if current_turn == 'player':
             action = player_strategy(L, B, current_player_lives, current_dealer_lives)
             node_id = f"{parent_node}-{shell_index}-{current_turn}-{action}"
-            label = f"Player: {action}, Shell: {current_shell}, Prob: {cumulative_probability:.2f}".replace('
-', ' ')
+            label = f"Player: {action}, Shell: {current_shell}, Prob: {cumulative_probability:.2f}"
             graph.add_node(node_id, label=label)
             edge_label = f"Action: {action}, Shell: {current_shell}, P={shell_probability:.2f}"
             graph.add_edge(parent_node, node_id, label=edge_label)
@@ -460,3 +459,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
