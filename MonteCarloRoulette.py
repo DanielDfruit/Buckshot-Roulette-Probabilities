@@ -21,7 +21,7 @@ dealer_strategy_descriptions = {
 
 # Strategy functions
 def player_aggressive_strategy(L, B, player_lives, dealer_lives):
-    return 'shoot_dealer'
+    return 'Shoots Dealer'
 
 def player_conservative_strategy(L, B, player_lives, dealer_lives):
     """
@@ -39,7 +39,7 @@ def player_conservative_strategy(L, B, player_lives, dealer_lives):
     # Dynamic threshold based on the remaining number of shells
     threshold = 0.5 + (B / (L + B)) * 0.5  # Adjust threshold dynamically based on remaining blank shells
     p_blank = B / (L + B)
-    return 'shoot_self' if p_blank > threshold else 'shoot_dealer'
+    return 'Shoots Self' if p_blank > threshold else 'shoot_dealer'
 
 def player_probability_based_strategy(L, B, player_lives, dealer_lives):
     """
@@ -60,7 +60,7 @@ def player_probability_based_strategy(L, B, player_lives, dealer_lives):
 
 # Dealer strategy functions
 def dealer_aggressive_strategy(L, B, dealer_lives, player_lives):
-    return 'shoot_player'
+    return 'Shoots Player'
 
 def dealer_conservative_strategy(L, B, dealer_lives, player_lives):
     """
@@ -126,11 +126,12 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
             node_id = f"{parent_node}-{shell_index}-{current_turn}-{action}"
             label = f"Player: {action}, Shell: {current_shell}, Prob: {cumulative_probability:.2f}"
             graph.add_node(node_id, label=label)
-            graph.add_edge(parent_node, node_id, label=f"P={shell_probability:.2f}")
+            edge_label = f"Action: {action}, Shell: {current_shell}, P={shell_probability:.2f}"
+            graph.add_edge(parent_node, node_id, label=edge_label)
 
-            if action == 'shoot_self' and current_shell == 'live':
+            if action == 'Shoots Self' and current_shell == 'live':
                 current_player_lives -= 1
-            elif action == 'shoot_dealer' and current_shell == 'live':
+            elif action == 'Shoots Dealer' and current_shell == 'live':
                 current_dealer_lives -= 1
 
             parent_node = node_id
@@ -140,11 +141,12 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
             node_id = f"{parent_node}-{shell_index}-{current_turn}-{action}"
             label = f"Dealer: {action}, Shell: {current_shell}, Prob: {cumulative_probability:.2f}"
             graph.add_node(node_id, label=label)
-            graph.add_edge(parent_node, node_id, label=f"P={shell_probability:.2f}")
+            edge_label = f"Action: {action}, Shell: {current_shell}, P={shell_probability:.2f}"
+            graph.add_edge(parent_node, node_id, label=edge_label)
 
-            if action == 'shoot_self' and current_shell == 'live':
+            if action == 'Shoots Self' and current_shell == 'live':
                 current_dealer_lives -= 1
-            elif action == 'shoot_player' and current_shell == 'live':
+            elif action == 'Shoots Player' and current_shell == 'live':
                 current_player_lives -= 1
 
             parent_node = node_id
@@ -167,6 +169,7 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
         results['draws'] += 1
 
     graph.add_edge(parent_node, result_node)
+
 # Visualize paths with PyVis
 import os
 
@@ -180,6 +183,14 @@ def visualize_game_paths(graph):
     for u, v, data in graph.edges(data=True):
         if 'label' in data:
             net.get_edge(u, v)['title'] = data['label']
+
+        # Color edges based on the action type
+        if 'Shoots Dealer' in data['label']:
+            net.get_edge(u, v)['color'] = 'blue'
+        elif 'Shoots Self' in data['label']:
+            net.get_edge(u, v)['color'] = 'green'
+        elif 'Shoots Player' in data['label']:
+            net.get_edge(u, v)['color'] = 'red'
 
     output_path = os.path.join(os.getcwd(), "game_paths.html")
 
@@ -293,6 +304,9 @@ def main():
         )
         st.altair_chart(outcome_pie_chart, use_container_width=True)
         
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
