@@ -161,19 +161,22 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
 # Visualize paths with PyVis
 import os
 
+import os
+
 def visualize_game_paths(graph):
     net = Network(notebook=False, height="750px", width="100%", cdn_resources='local')
     net.from_nx(graph)
-    output_path = "game_paths.html"
+    output_path = os.path.join(os.getcwd(), "game_paths.html")
+
     try:
-        net.write_html(output_path)
-        # Display link to generated HTML in Streamlit
+        net.write_html(output_path, notebook=False)
         if os.path.exists(output_path):
             st.markdown(f"[View Game Paths]({output_path})", unsafe_allow_html=True)
         else:
             st.error("Failed to generate game paths visualization.")
     except Exception as e:
         st.error(f"Error generating visualization: {e}")
+        st.write("Make sure that the directory is writable and the environment supports HTML generation.")
 
 # Main simulation loop
 def simulate_all_possible_games(
@@ -246,3 +249,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
