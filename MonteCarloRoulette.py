@@ -188,7 +188,7 @@ def main():
            - **Risk Tolerance**: Adjusts the Dealer’s aggressiveness based on relative lives. Higher values mean the Dealer will take more risks.
            - **Caution Level**: Dictates how likely the Dealer is to shoot themselves if there's a high chance of a blank shell.
            - **Bluff Factor**: Adds unpredictability by occasionally making the Dealer ignore probabilities and choose randomly.
-        "")
+        """)
 
     # Simulation Tab Content
     with tab_simulation:
