@@ -232,7 +232,7 @@ def main():
         st.write(f"Draw Rate: **{results['draw_rate']:.2f}%**")
 
         # Probability Trend Plot
-        st.subheader("Probability Trend of Drawing a Live or Blank Shell Over Turns")
+        st.subheader("Probability of Drawing a Live or Blank Shell by Turn")
         avg_prob_trend = results['average_prob_trend']
         turns = range(1, len(avg_prob_trend) + 1)
         p_live = [prob['p_live'] for prob in avg_prob_trend]
@@ -247,7 +247,7 @@ def main():
         st.pyplot(fig)
 
         # Win Rate Heatmap for Strategy Combinations
-        st.subheader("Win Rate Heatmap for Strategy Combinations")
+        st.subheader("Win Rate Heatmap for Each Strategy Combinations")
         strategy_combinations = [(p, d) for p in player_strategies.keys() for d in dealer_strategies.keys()]
         win_rates = [
             simulate_buckshot_game(
