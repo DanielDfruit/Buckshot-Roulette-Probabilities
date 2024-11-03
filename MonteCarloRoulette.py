@@ -243,8 +243,7 @@ def main():
         chart = alt.Chart(data).mark_bar().encode(
             color=alt.Color('Outcome', scale=alt.Scale(domain=['Player Wins', 'Dealer Wins', 'Draws'], range=['#1f77b4', '#ff7f0e', '#2ca02c'])),
             x=alt.X('Outcome', sort=None),
-            y='Win Rate (%)',
-            color='Outcome'
+            y='Win Rate (%)'
         ).properties(
             width=600,
             height=400,
