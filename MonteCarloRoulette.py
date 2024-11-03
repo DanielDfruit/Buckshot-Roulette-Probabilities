@@ -159,6 +159,8 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
     graph.add_edge(parent_node, result_node)
 
 # Visualize paths with PyVis
+import os
+
 def visualize_game_paths(graph):
     net = Network(notebook=False, height="750px", width="100%", cdn_resources='local')
     net.from_nx(graph)
@@ -249,3 +251,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
