@@ -52,6 +52,26 @@ def dealer_dynamic_strategy(L, B, dealer_lives, player_lives, risk_tolerance, ca
         # High caution level means the dealer is more conservative
         return 'shoot_self' if p_blank > caution_level else 'shoot_player'
 
+def calculate_average_probability_trend(probability_trends):
+    """Calculate average probability trend across all games."""
+    max_turns = max(len(game) for game in probability_trends)
+    avg_prob_trend = []
+
+    for turn in range(max_turns):
+        p_live_sum = p_blank_sum = count = 0
+        for game in probability_trends:
+            if turn < len(game):
+                p_live_sum += game[turn]['p_live']
+                p_blank_sum += game[turn]['p_blank']
+                count += 1
+
+        if count > 0:
+            avg_prob_trend.append({'p_live': p_live_sum / count, 'p_blank': p_blank_sum / count})
+        else:
+            avg_prob_trend.append({'p_live': None, 'p_blank': None})
+
+    return avg_prob_trend
+    
 # Simulation functions
 def simulate_buckshot_game(
     rounds,
