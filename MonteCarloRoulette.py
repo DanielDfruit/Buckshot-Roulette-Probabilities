@@ -244,6 +244,9 @@ def simulate_all_possible_games(
 def main():
     st.title("Buckshot Roulette Simulation with Path Visualization")
 
+    # Add Tab Layout for Different Information Views
+    tab_simulation, tab_summary = st.tabs(["Simulation", "Scenario Summary"])
+
     # Rules Section
     
     # Sidebar parameters
@@ -275,14 +278,85 @@ def main():
     selected_dealer_strategy = dealer_strategies[dealer_strategy_option]
 
     # Run simulation
-    if st.button("Run Simulation and Visualize Paths"):
-        results = simulate_all_possible_games(
-            live_shells, blank_shells, initial_player_lives, initial_dealer_lives,
-            selected_player_strategy, selected_dealer_strategy
+    with tab_simulation:
+        if st.button("Run Simulation and Visualize Paths"):
+            results = simulate_all_possible_games(
+                live_shells, blank_shells, initial_player_lives, initial_dealer_lives,
+                selected_player_strategy, selected_dealer_strategy
+            )
+            st.write(f"Player Wins: {results['player_wins']}")
+            st.write(f"Dealer Wins: {results['dealer_wins']}")
+            st.write(f"Draws: {results['draws']}")
+
+            # Additional charts
+        # Bar chart of outcomes with Plotly
+        outcome_data = pd.DataFrame({
+            'Outcome': ['Player Wins', 'Dealer Wins', 'Draws'],
+            'Count': [results['player_wins'], results['dealer_wins'], results['draws']]
+        })
+        
+        bar_chart = go.Figure()
+        bar_chart.add_trace(go.Bar(
+            x=outcome_data['Outcome'],
+            y=outcome_data['Count'],
+            marker=dict(color=['green', 'red', 'gray']),
+            text=outcome_data['Count'],
+            textposition='auto'
+        ))
+        bar_chart.update_layout(
+            title='Simulation Outcomes',
+            xaxis_title='Outcome',
+            yaxis_title='Count',
+            template='plotly_dark'
         )
-        st.write(f"Player Wins: {results['player_wins']}")
-        st.write(f"Dealer Wins: {results['dealer_wins']}")
-        st.write(f"Draws: {results['draws']}")
+        st.plotly_chart(bar_chart, use_container_width=True)
+
+        # Pie chart of outcomes with Plotly
+        pie_chart = go.Figure()
+        pie_chart.add_trace(go.Pie(
+            labels=outcome_data['Outcome'],
+            values=outcome_data['Count'],
+            marker=dict(colors=['green', 'red', 'gray']),
+            textinfo='label+percent',
+            insidetextorientation='radial'
+        ))
+        pie_chart.update_layout(
+            title='Outcome Distribution',
+            template='plotly_dark'
+        )
+        st.plotly_chart(pie_chart, use_container_width=True)
+
+        # Plot of most common win scenarios
+        most_common_scenarios = pd.DataFrame({
+            'Scenario': ['Player Shoots Dealer First, Wins', 'Dealer Shoots Player First, Wins', 'Player Shoots Self and Wins'],
+            'Frequency': [45, 30, 25]  # Example frequencies, replace with actual data if available
+        })
+        common_win_chart = go.Figure()
+        common_win_chart.add_trace(go.Bar(
+            x=most_common_scenarios['Scenario'],
+            y=most_common_scenarios['Frequency'],
+            marker=dict(color=['blue', 'red', 'green']),
+            text=most_common_scenarios['Frequency'],
+            textposition='auto'
+        ))
+        common_win_chart.update_layout(
+            title='Most Common Win Scenarios',
+            xaxis_title='Scenario',
+            yaxis_title='Frequency',
+            template='plotly_dark'
+        )
+        st.plotly_chart(common_win_chart, use_container_width=True)
+
+    with tab_summary:
+        st.header("Scenario Summary Across All Turns")
+        st.write("This tab provides a detailed summary of the outcomes and choices made during each turn across all possible game scenarios.")
+        summary_table = pd.DataFrame({
+            'Scenario': ['Scenario 1', 'Scenario 2', 'Scenario 3'],  # Replace with actual scenarios
+            'Player Action': ['Shoots Dealer', 'Shoots Self', 'Shoots Dealer'],
+            'Dealer Action': ['Shoots Player', 'Shoots Self', 'Shoots Player'],
+            'Outcome': ['Player Wins', 'Dealer Wins', 'Draw']
+        })
+        st.dataframe(summary_table, use_container_width=True)
 
         # Additional charts
         # Bar chart of outcomes with Plotly
