@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from itertools import product
-
+import seaborn as sns
 # Strategy descriptions
 player_strategy_descriptions = {
     'Aggressive': 'Always shoot the Dealer.',
