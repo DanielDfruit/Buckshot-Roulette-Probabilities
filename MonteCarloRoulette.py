@@ -4,6 +4,7 @@ import pandas as pd
 from itertools import permutations
 import altair as alt
 import plotly.graph_objects as go
+import plotly.express as px
 import networkx as nx
 from pyvis.network import Network
 
@@ -289,68 +290,83 @@ def main():
             st.write(f"Draws: {results['draws']}")
 
             # Additional charts
-        # Bar chart of outcomes with Plotly
-        outcome_data = pd.DataFrame({
-            'Outcome': ['Player Wins', 'Dealer Wins', 'Draws'],
-            'Count': [results['player_wins'], results['dealer_wins'], results['draws']]
-        })
-        
-        bar_chart = go.Figure()
-        bar_chart.add_trace(go.Bar(
-            x=outcome_data['Outcome'],
-            y=outcome_data['Count'],
-            marker=dict(color=['green', 'red', 'gray']),
-            text=outcome_data['Count'],
-            textposition='auto'
-        ))
-        bar_chart.update_layout(
-            title='Simulation Outcomes',
-            xaxis_title='Outcome',
-            yaxis_title='Count',
-            template='plotly_dark'
-        )
-        st.plotly_chart(bar_chart, use_container_width=True)
+            # Bar chart of outcomes with Plotly
+            outcome_data = pd.DataFrame({
+                'Outcome': ['Player Wins', 'Dealer Wins', 'Draws'],
+                'Count': [results['player_wins'], results['dealer_wins'], results['draws']]
+            })
+            
+            bar_chart = go.Figure()
+            bar_chart.add_trace(go.Bar(
+                x=outcome_data['Outcome'],
+                y=outcome_data['Count'],
+                marker=dict(color=['green', 'red', 'gray']),
+                text=outcome_data['Count'],
+                textposition='auto'
+            ))
+            bar_chart.update_layout(
+                title='Simulation Outcomes',
+                xaxis_title='Outcome',
+                yaxis_title='Count',
+                template='plotly_dark'
+            )
+            st.plotly_chart(bar_chart, use_container_width=True)
 
-        # Pie chart of outcomes with Plotly
-        pie_chart = go.Figure()
-        pie_chart.add_trace(go.Pie(
-            labels=outcome_data['Outcome'],
-            values=outcome_data['Count'],
-            marker=dict(colors=['green', 'red', 'gray']),
-            textinfo='label+percent',
-            insidetextorientation='radial'
-        ))
-        pie_chart.update_layout(
-            title='Outcome Distribution',
-            template='plotly_dark'
-        )
-        st.plotly_chart(pie_chart, use_container_width=True)
+            # Pie chart of outcomes with Plotly
+            pie_chart = go.Figure()
+            pie_chart.add_trace(go.Pie(
+                labels=outcome_data['Outcome'],
+                values=outcome_data['Count'],
+                marker=dict(colors=['green', 'red', 'gray']),
+                textinfo='label+percent',
+                insidetextorientation='radial'
+            ))
+            pie_chart.update_layout(
+                title='Outcome Distribution',
+                template='plotly_dark'
+            )
+            st.plotly_chart(pie_chart, use_container_width=True)
 
-        # Plot of most common win scenarios
-        most_common_scenarios = pd.DataFrame({
-            'Scenario': ['Player Shoots Dealer First, Wins', 'Dealer Shoots Player First, Wins', 'Player Shoots Self and Wins'],
-            'Frequency': [45, 30, 25]  # Example frequencies, replace with actual data if available
-        })
-        common_win_chart = go.Figure()
-        common_win_chart.add_trace(go.Bar(
-            x=most_common_scenarios['Scenario'],
-            y=most_common_scenarios['Frequency'],
-            marker=dict(color=['blue', 'red', 'green']),
-            text=most_common_scenarios['Frequency'],
-            textposition='auto'
-        ))
-        common_win_chart.update_layout(
-            title='Most Common Win Scenarios',
-            xaxis_title='Scenario',
-            yaxis_title='Frequency',
-            template='plotly_dark'
-        )
-        st.plotly_chart(common_win_chart, use_container_width=True)
+            # Plot of most common win scenarios
+            most_common_scenarios = pd.DataFrame({
+                'Scenario': ['Player Shoots Dealer First, Wins', 'Dealer Shoots Player First, Wins', 'Player Shoots Self and Wins'],
+                'Frequency': [45, 30, 25]  # Example frequencies, replace with actual data if available
+            })
+            common_win_chart = go.Figure()
+            common_win_chart.add_trace(go.Bar(
+                x=most_common_scenarios['Scenario'],
+                y=most_common_scenarios['Frequency'],
+                marker=dict(color=['blue', 'red', 'green']),
+                text=most_common_scenarios['Frequency'],
+                textposition='auto'
+            ))
+            common_win_chart.update_layout(
+                title='Most Common Win Scenarios',
+                xaxis_title='Scenario',
+                yaxis_title='Frequency',
+                template='plotly_dark'
+            )
+            st.plotly_chart(common_win_chart, use_container_width=True)
+
+            # Heatmap of all strategy combinations
+            heatmap_data = pd.DataFrame(
+                [(p_strat, d_strat, results['player_wins'], results['dealer_wins'], results['draws'])
+                 for p_strat in player_strategies.keys()
+                 for d_strat in dealer_strategies.keys()],
+                columns=['Player Strategy', 'Dealer Strategy', 'Player Wins', 'Dealer Wins', 'Draws']
+            )
+
+            heatmap_fig = px.density_heatmap(
+                heatmap_data, x='Player Strategy', y='Dealer Strategy', z='Player Wins',
+                color_continuous_scale='Viridis',
+                title='Heatmap of Strategy Combinations and Player Wins'
+            )
+            st.plotly_chart(heatmap_fig, use_container_width=True)
 
     with tab_summary:
         st.header("Scenario Summary Across All Turns")
         st.write("This tab provides a detailed summary of the outcomes and choices made during each turn across all possible game scenarios.")
-        if 'results' in locals():
+        if 'results' in locals() and results is not None:
             summary_table = pd.DataFrame({
                 'Scenario': ['Scenario 1', 'Scenario 2', 'Scenario 3'],  # Replace with actual scenarios
                 'Player Action': ['Shoots Dealer', 'Shoots Self', 'Shoots Dealer'],
@@ -398,6 +414,7 @@ def main():
             st.plotly_chart(pie_chart, use_container_width=True)
         else:
             st.write("Please run the simulation to see the summary.")
+                return
 
         # Additional charts
         # Bar chart of outcomes with Plotly
