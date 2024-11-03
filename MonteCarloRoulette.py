@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 from itertools import permutations
+import altair as alt
 
 # Game simulation functions
 def generate_all_permutations(live_shells, blank_shells):
@@ -102,7 +103,8 @@ def simulate_all_possible_games(
     return {
         'player_win_rate': player_win_rate,
         'dealer_win_rate': dealer_win_rate,
-        'draw_rate': draw_rate
+        'draw_rate': draw_rate,
+        'total_results': total_results
     }
 
 def main():
@@ -125,9 +127,58 @@ def main():
                 initial_player_lives,
                 initial_dealer_lives
             )
+        st.success('Simulation Complete!')
+
         st.write(f"Player Win Rate: **{results['player_win_rate']:.2f}%**")
         st.write(f"Dealer Win Rate: **{results['dealer_win_rate']:.2f}%**")
         st.write(f"Draw Rate: **{results['draw_rate']:.2f}%**")
+
+        # Create a DataFrame for plotting
+        data = pd.DataFrame({
+            'Outcome': ['Player Wins', 'Dealer Wins', 'Draws'],
+            'Win Rate (%)': [
+                results['player_win_rate'],
+                results['dealer_win_rate'],
+                results['draw_rate']
+            ]
+        })
+
+        # Create a bar chart using Altair
+        chart = alt.Chart(data).mark_bar().encode(
+            x=alt.X('Outcome', sort=None),
+            y='Win Rate (%)',
+            color='Outcome'
+        ).properties(
+            width=600,
+            height=400,
+            title='Simulation Results'
+        )
+
+        st.altair_chart(chart, use_container_width=True)
+
+        # Optionally, display the total counts
+        st.subheader("Total Outcomes")
+        st.write(f"Total Player Wins: **{results['total_results']['player_wins']}**")
+        st.write(f"Total Dealer Wins: **{results['total_results']['dealer_wins']}**")
+        st.write(f"Total Draws: **{results['total_results']['draws']}**")
+
+        # Additional detailed table
+        st.subheader("Detailed Results")
+        total_games = results['total_results']['player_wins'] + results['total_results']['dealer_wins'] + results['total_results']['draws']
+        detailed_data = pd.DataFrame({
+            'Outcome': ['Player Wins', 'Dealer Wins', 'Draws'],
+            'Count': [
+                results['total_results']['player_wins'],
+                results['total_results']['dealer_wins'],
+                results['total_results']['draws']
+            ],
+            'Percentage': [
+                results['player_win_rate'],
+                results['dealer_win_rate'],
+                results['draw_rate']
+            ]
+        })
+        st.dataframe(detailed_data)
 
 if __name__ == "__main__":
     main()
