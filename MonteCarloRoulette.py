@@ -244,31 +244,7 @@ def main():
     st.title("Buckshot Roulette Simulation with Path Visualization")
 
     # Rules Section
-    st.header("Game Rules for Buckshot Roulette Simulation")
-    st.markdown("""
-    In this simulation of Buckshot Roulette, the following rules and conditions are applied:
     
-    1. **Game Structure**:
-       - The game consists of a shotgun loaded with a combination of live and blank shells in a deterministic order.
-       - The player and the Dealer take turns choosing to shoot either themselves or their opponent.
-       - If the player shoots self on their turn with a blank, they retain their turn and go again.
-
-    2. **Rounds**:
-       - The game explores every possible combination of live and blank shells to determine the outcome.
-
-    3. **Lives**:
-       - Both the player and Dealer start with an initial number of lives, which can be adjusted in the settings.
-       - A live shell shot reduces the chosen target’s lives by one.
-       - If neither the player nor the dealer can be killed with the remaining live shells, the game ends in a draw.
-
-    4. **Turn-Based Actions**:
-       - On each turn, the player or Dealer can choose to shoot themselves or the other.
-       - The choice of shooting depends on the selected strategy:
-         - **Aggressive**: Always shoot the opponent.
-         - **Conservative**: Shoot themselves if there is a high probability of drawing a blank shell; otherwise, shoot the opponent.
-         - **Probability-Based**: Based on the probability of live vs. blank shells, shoot themselves if the chance of a blank is higher.
-    """)
-
     # Sidebar parameters
     st.sidebar.header("Simulation Parameters")
     max_shells = 5  # Reduced for computational feasibility
@@ -334,6 +310,4 @@ def main():
         
 
 if __name__ == "__main__":
-    main()
-
     main()
