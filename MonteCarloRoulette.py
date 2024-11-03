@@ -179,18 +179,20 @@ def visualize_game_paths(graph):
     net = Network(notebook=False, height="750px", width="100%", cdn_resources='local')
     net.from_nx(graph)
 
-    # Modify edges to include probability labels if available
+    # Add probability labels and color edges
     for u, v, data in graph.edges(data=True):
-        if 'label' in data:
-            net.get_edge(u, v)['title'] = data['label']
+        edge_label = data.get('label', '')
+
+        # Set edge title for displaying information
+        net.add_edge(u, v, title=edge_label)
 
         # Color edges based on the action type
-        if 'Shoots Dealer' in data['label']:
-            net.get_edge(u, v)['color'] = 'blue'
-        elif 'Shoots Self' in data['label']:
-            net.get_edge(u, v)['color'] = 'green'
-        elif 'Shoots Player' in data['label']:
-            net.get_edge(u, v)['color'] = 'red'
+        if 'Shoots Dealer' in edge_label:
+            net.get_node(u)['color'] = 'blue'
+        elif 'Shoots Self' in edge_label:
+            net.get_node(u)['color'] = 'green'
+        elif 'Shoots Player' in edge_label:
+            net.get_node(u)['color'] = 'red'
 
     output_path = os.path.join(os.getcwd(), "game_paths.html")
 
@@ -265,10 +267,6 @@ def main():
          - **Aggressive**: Always shoot the opponent.
          - **Conservative**: Shoot themselves if there is a high probability of drawing a blank shell; otherwise, shoot the opponent.
          - **Probability-Based**: Based on the probability of live vs. blank shells, shoot themselves if the chance of a blank is higher.
-
-    5. **Dealer AI Behavior Settings**:
-       - **Risk Tolerance**: Adjusts the Dealer’s aggressiveness based on relative lives. Higher values mean the Dealer will take more risks.
-       - **Caution Level**: Dictates how likely the Dealer is to shoot themselves if there's a high chance of a blank shell.
     """)
 
     # Sidebar parameters
@@ -336,4 +334,6 @@ def main():
         
 
 if __name__ == "__main__":
+    main()
+
     main()
