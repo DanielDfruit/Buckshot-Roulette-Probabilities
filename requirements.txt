@@ -7,3 +7,4 @@ altair
 networkx
 pyvis
 jinja2
+plotly
