@@ -223,6 +223,49 @@ def main():
         st.markdown("""
         Here you can visualize the results and statistics from the simulation.
         """)
+        # Win Probability Heatmap for Player vs Dealer Strategies
+        st.subheader("Win Probability Heatmap for Strategies")
+        strategy_combinations = [(p, d) for p in player_strategies.keys() for d in dealer_strategy_descriptions.keys()]
+        win_rates = [
+            simulate_all_possible_games(
+                live_shells, blank_shells, initial_player_lives, initial_dealer_lives,
+                player_strategies[p], dealer_dynamic_strategy,
+                player_threshold, dealer_risk_tolerance, dealer_caution_level, dealer_bluff_factor
+            )['player_win_rate'] for p, d in strategy_combinations
+        ]
+
+        heatmap_data = pd.DataFrame(
+            np.array(win_rates).reshape(len(player_strategies), len(dealer_strategy_descriptions)),
+            index=player_strategies.keys(),
+            columns=dealer_strategy_descriptions.keys()
+        )
+
+        fig, ax = plt.subplots()
+        sns.heatmap(heatmap_data, annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
+        ax.set_xlabel("Dealer Strategy")
+        ax.set_ylabel("Player Strategy")
+        ax.set_title("Player Win Rate (%) by Strategy Combination")
+        st.pyplot(fig)
+
+        # Player vs Dealer Lives Difference Chart
+        st.subheader("Player vs Dealer Lives Over Game Progression")
+        avg_lives_diff = []
+
+        for shell_order in generate_all_permutations(live_shells, blank_shells):
+            _, game_probabilities = simulate_single_game(
+                shell_order, initial_player_lives, initial_dealer_lives,
+                selected_player_strategy, dealer_dynamic_strategy,
+                player_threshold, dealer_risk_tolerance, dealer_caution_level, dealer_bluff_factor
+            )
+            avg_lives_diff.append(game_probabilities)
+
+        avg_diff_data = [np.mean([prob['p_live'] - prob['p_blank'] for prob in game]) for game in avg_lives_diff]
+        fig, ax = plt.subplots()
+        ax.plot(range(1, len(avg_diff_data) + 1), avg_diff_data, label="Average Lives Difference", color="green", marker='o')
+        ax.set_xlabel("Turn Number")
+        ax.set_ylabel("Average Lives Difference (Player - Dealer)")
+        ax.set_title("Player vs Dealer Lives Difference Over Game Turns")
+        st.pyplot(fig)
 
 if __name__ == "__main__":
     main()
