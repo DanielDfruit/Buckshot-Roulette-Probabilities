@@ -309,6 +309,9 @@ def main():
         ax.set_xlabel("Dealer Strategy")
         ax.set_ylabel("Player Strategy")
         st.pyplot(fig)
+# Ensure `rounds` is defined from Streamlit's sidebar or elsewhere in the main function
+rounds = st.sidebar.number_input("Number of rounds to simulate", min_value=100, max_value=100000, value=1000, step=100)
+
 # Plot Cumulative Win Rates Across Simulations
 st.subheader("Cumulative Win Rate Across Simulations")
 
@@ -317,7 +320,7 @@ cumulative_player_wins = []
 cumulative_dealer_wins = []
 cumulative_draws = []
 
-# Run each simulation and track cumulative win rates
+# Initialize counters for cumulative tracking
 player_cumulative_wins = 0
 dealer_cumulative_wins = 0
 draws_cumulative = 0
