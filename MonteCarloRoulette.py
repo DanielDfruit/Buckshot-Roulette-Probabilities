@@ -126,14 +126,15 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
         if current_turn == 'player':
             action = player_strategy(L, B, current_player_lives, current_dealer_lives)
             node_id = f"{parent_node}-{shell_index}-{current_turn}-{action}"
-            label = f"Player: {action}, Shell: {current_shell}, Prob: {cumulative_probability:.2f}"
+            label = f"Player: {action}, Shell: {current_shell}, Prob: {cumulative_probability:.2f}".replace('
+', ' ')
             graph.add_node(node_id, label=label)
             edge_label = f"Action: {action}, Shell: {current_shell}, P={shell_probability:.2f}"
             graph.add_edge(parent_node, node_id, label=edge_label)
 
-            if action == 'Shoots Self' and current_shell == 'live':
+            if action == 'shoot_self' and current_shell == 'live':
                 current_player_lives -= 1
-            elif action == 'Shoots Dealer' and current_shell == 'live':
+            elif action == 'shoot_dealer' and current_shell == 'live':
                 current_dealer_lives -= 1
 
             parent_node = node_id
@@ -148,7 +149,7 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
 
             if action == 'Shoots Self' and current_shell == 'live':
                 current_dealer_lives -= 1
-            elif action == 'Shoots Player' and current_shell == 'live':
+            elif action == 'shoot_player' and current_shell == 'live':
                 current_player_lives -= 1
 
             parent_node = node_id
@@ -186,7 +187,7 @@ def visualize_game_paths(graph):
         edge_label = data.get('label', '')
 
         # Set edge title for displaying information
-        net.add_edge(u, v, title=edge_label)
+        net.add_edge(u, v, title=edge_label, labelHighlightBold=True)
 
         # Color edges based on the action type
         if 'Shoots Dealer' in edge_label:
@@ -243,6 +244,8 @@ def simulate_all_possible_games(
 
 # Streamlit interface
 def main():
+    # Initialize results globally to avoid UnboundLocalError
+    results = {'player_wins': 0, 'dealer_wins': 0, 'draws': 0}
     st.title("Buckshot Roulette Simulation with Path Visualization")
 
     # Add Tab Layout for Different Information Views
@@ -366,7 +369,7 @@ def main():
     with tab_summary:
         st.header("Scenario Summary Across All Turns")
         st.write("This tab provides a detailed summary of the outcomes and choices made during each turn across all possible game scenarios.")
-        if 'results' in locals() and results is not None:
+        if results and results['player_wins'] + results['dealer_wins'] + results['draws'] > 0:
             summary_table = pd.DataFrame({
                 'Scenario': ['Scenario 1', 'Scenario 2', 'Scenario 3'],  # Replace with actual scenarios
                 'Player Action': ['Shoots Dealer', 'Shoots Self', 'Shoots Dealer'],
