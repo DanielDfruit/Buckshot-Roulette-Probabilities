@@ -23,7 +23,7 @@ dealer_strategy_descriptions = {
 
 # Strategy functions
 def player_aggressive_strategy(L, B, player_lives, dealer_lives):
-    return 'Shoots Dealer'
+                    st.write("Please run the simulation to see the summary.") 'Shoots Dealer'
 
 def player_conservative_strategy(L, B, player_lives, dealer_lives):
     """
@@ -414,7 +414,7 @@ def main():
             st.plotly_chart(pie_chart, use_container_width=True)
         else:
             st.write("Please run the simulation to see the summary.")
-                return
+
 
         # Additional charts
         # Bar chart of outcomes with Plotly
