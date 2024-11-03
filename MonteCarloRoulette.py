@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 from itertools import permutations
 import altair as alt
+import plotly.graph_objects as go
 import networkx as nx
 from pyvis.network import Network
 
@@ -284,29 +285,42 @@ def main():
         st.write(f"Draws: {results['draws']}")
 
         # Additional charts
-        # Bar chart of outcomes
+        # Bar chart of outcomes with Plotly
         outcome_data = pd.DataFrame({
             'Outcome': ['Player Wins', 'Dealer Wins', 'Draws'],
             'Count': [results['player_wins'], results['dealer_wins'], results['draws']]
         })
-        outcome_chart = alt.Chart(outcome_data).mark_bar().encode(
-            x='Outcome',
-            y='Count',
-            color='Outcome'
-        ).properties(
-            title='Simulation Outcomes'
+        
+        bar_chart = go.Figure()
+        bar_chart.add_trace(go.Bar(
+            x=outcome_data['Outcome'],
+            y=outcome_data['Count'],
+            marker=dict(color=['green', 'red', 'gray']),
+            text=outcome_data['Count'],
+            textposition='auto'
+        ))
+        bar_chart.update_layout(
+            title='Simulation Outcomes',
+            xaxis_title='Outcome',
+            yaxis_title='Count',
+            template='plotly_dark'
         )
-        st.altair_chart(outcome_chart, use_container_width=True)
+        st.plotly_chart(bar_chart, use_container_width=True)
 
-        # Pie chart of outcomes
-        outcome_pie_chart = alt.Chart(outcome_data).mark_arc().encode(
-            theta=alt.Theta(field='Count', type='quantitative'),
-            color=alt.Color(field='Outcome', type='nominal'),
-            tooltip=['Outcome', 'Count']
-        ).properties(
-            title='Outcome Distribution'
+        # Pie chart of outcomes with Plotly
+        pie_chart = go.Figure()
+        pie_chart.add_trace(go.Pie(
+            labels=outcome_data['Outcome'],
+            values=outcome_data['Count'],
+            marker=dict(colors=['green', 'red', 'gray']),
+            textinfo='label+percent',
+            insidetextorientation='radial'
+        ))
+        pie_chart.update_layout(
+            title='Outcome Distribution',
+            template='plotly_dark'
         )
-        st.altair_chart(outcome_pie_chart, use_container_width=True)
+        st.plotly_chart(pie_chart, use_container_width=True)
         
 
 if __name__ == "__main__":
