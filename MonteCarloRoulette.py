@@ -23,7 +23,7 @@ dealer_strategy_descriptions = {
 
 # Strategy functions
 def player_aggressive_strategy(L, B, player_lives, dealer_lives):
-                    st.write("Please run the simulation to see the summary.")
+        return 'shoot_dealer'
 
 def player_conservative_strategy(L, B, player_lives, dealer_lives):
     """
