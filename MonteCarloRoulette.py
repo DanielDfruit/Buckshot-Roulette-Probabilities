@@ -19,6 +19,22 @@ dealer_strategy_descriptions = {
     'Random': 'Randomly choose to shoot self or the player.'
 }
 
+# Plot style for a black background
+def set_dark_theme():
+    plt.style.use('dark_background')
+    plt.rcParams['axes.facecolor'] = 'black'
+    plt.rcParams['figure.facecolor'] = 'black'
+    plt.rcParams['text.color'] = 'white'
+    plt.rcParams['axes.labelcolor'] = 'white'
+    plt.rcParams['xtick.color'] = 'white'
+    plt.rcParams['ytick.color'] = 'white'
+    plt.rcParams['legend.facecolor'] = 'black'
+    plt.rcParams['legend.edgecolor'] = 'white'
+    plt.rcParams['grid.color'] = '#444444'
+
+# Apply the dark theme to all plots
+set_dark_theme()
+
 # Strategy functions
 def player_aggressive_strategy(L, B, player_lives, dealer_lives):
     return 'shoot_dealer'
@@ -30,34 +46,19 @@ def player_conservative_strategy(L, B, player_lives, dealer_lives, threshold=0.7
     return 'shoot_self' if p_blank > threshold else 'shoot_dealer'
 
 def player_probability_based_strategy(L, B, player_lives, dealer_lives):
-    # Ensure that L + B is not zero to avoid division by zero
     if (L + B) == 0:
-        return 'shoot_dealer'  # Default action when no shells are left
-
+        return 'shoot_dealer'
     p_live = L / (L + B)
     p_blank = B / (L + B)
+    return 'shoot_self' if p_blank > p_live else 'shoot_dealer'
 
-    # The strategy: shoot self if blank probability is higher than live probability
-    if p_blank > p_live:
-        return 'shoot_self'
-    else:
-        return 'shoot_dealer'
-
-# Enhanced dealer strategy function with AI behavior settings
 def dealer_dynamic_strategy(L, B, dealer_lives, player_lives, risk_tolerance, caution_level, bluff_factor):
     if np.random.rand() < bluff_factor:
-        return np.random.choice(['shoot_self', 'shoot_player'])  # Random choice as a bluff
-
+        return np.random.choice(['shoot_self', 'shoot_player'])
     if (L + B) == 0:
         return 'shoot_player'
-
     p_blank = B / (L + B)
-    if dealer_lives <= player_lives * risk_tolerance:
-        # High risk tolerance means the dealer is more aggressive
-        return 'shoot_player' if np.random.rand() > p_blank else 'shoot_self'
-    else:
-        # High caution level means the dealer is more conservative
-        return 'shoot_self' if p_blank > caution_level else 'shoot_player'
+    return 'shoot_player' if (dealer_lives <= player_lives * risk_tolerance or p_blank <= caution_level) else 'shoot_self'
 
 # Simulation functions
 def simulate_buckshot_game(
@@ -74,7 +75,7 @@ def simulate_buckshot_game(
     dealer_bluff_factor=0.1
 ):
     player_wins = dealer_wins = draws = 0
-    probability_trends = []  # Track probability at each turn
+    probability_trends = []
 
     for _ in range(rounds):
         winner, game_probabilities = simulate_single_game(
@@ -252,8 +253,8 @@ def main():
             p_blank = [prob['p_blank'] for prob in avg_prob_trend]
 
             fig, ax = plt.subplots()
-            ax.plot(turns, p_live, label='Probability of Live Shell', marker='o')
-            ax.plot(turns, p_blank, label='Probability of Blank Shell', marker='o')
+            ax.plot(turns, p_live, label='Probability of Live Shell', marker='o', color='blue')
+            ax.plot(turns, p_blank, label='Probability of Blank Shell', marker='o', color='orange')
             ax.set_xlabel("Turn Number")
             ax.set_ylabel("Probability")
             ax.legend()
@@ -320,5 +321,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
