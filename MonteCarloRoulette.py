@@ -350,13 +350,54 @@ def main():
     with tab_summary:
         st.header("Scenario Summary Across All Turns")
         st.write("This tab provides a detailed summary of the outcomes and choices made during each turn across all possible game scenarios.")
-        summary_table = pd.DataFrame({
-            'Scenario': ['Scenario 1', 'Scenario 2', 'Scenario 3'],  # Replace with actual scenarios
-            'Player Action': ['Shoots Dealer', 'Shoots Self', 'Shoots Dealer'],
-            'Dealer Action': ['Shoots Player', 'Shoots Self', 'Shoots Player'],
-            'Outcome': ['Player Wins', 'Dealer Wins', 'Draw']
-        })
-        st.dataframe(summary_table, use_container_width=True)
+        if 'results' in locals():
+            summary_table = pd.DataFrame({
+                'Scenario': ['Scenario 1', 'Scenario 2', 'Scenario 3'],  # Replace with actual scenarios
+                'Player Action': ['Shoots Dealer', 'Shoots Self', 'Shoots Dealer'],
+                'Dealer Action': ['Shoots Player', 'Shoots Self', 'Shoots Player'],
+                'Outcome': ['Player Wins', 'Dealer Wins', 'Draw']
+            })
+            st.dataframe(summary_table, use_container_width=True)
+
+            # Additional charts
+            # Bar chart of outcomes with Plotly
+            outcome_data = pd.DataFrame({
+                'Outcome': ['Player Wins', 'Dealer Wins', 'Draws'],
+                'Count': [results['player_wins'], results['dealer_wins'], results['draws']]
+            })
+            
+            bar_chart = go.Figure()
+            bar_chart.add_trace(go.Bar(
+                x=outcome_data['Outcome'],
+                y=outcome_data['Count'],
+                marker=dict(color=['green', 'red', 'gray']),
+                text=outcome_data['Count'],
+                textposition='auto'
+            ))
+            bar_chart.update_layout(
+                title='Simulation Outcomes',
+                xaxis_title='Outcome',
+                yaxis_title='Count',
+                template='plotly_dark'
+            )
+            st.plotly_chart(bar_chart, use_container_width=True)
+
+            # Pie chart of outcomes with Plotly
+            pie_chart = go.Figure()
+            pie_chart.add_trace(go.Pie(
+                labels=outcome_data['Outcome'],
+                values=outcome_data['Count'],
+                marker=dict(colors=['green', 'red', 'gray']),
+                textinfo='label+percent',
+                insidetextorientation='radial'
+            ))
+            pie_chart.update_layout(
+                title='Outcome Distribution',
+                template='plotly_dark'
+            )
+            st.plotly_chart(pie_chart, use_container_width=True)
+        else:
+            st.write("Please run the simulation to see the summary.")
 
         # Additional charts
         # Bar chart of outcomes with Plotly
