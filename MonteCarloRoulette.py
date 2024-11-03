@@ -7,8 +7,8 @@ from itertools import product
 
 # Strategy descriptions
 player_strategy_descriptions = {
-    'Aggressive': 'Always shoot the Dealer.',
-    'Conservative': 'Shoot self when there is a high chance of drawing a blank shell; otherwise, shoot the Dealer.',
+    'Aggressive': 'Always shoot the Dealer when it is your turn.',
+    'Conservative': 'Shoot self when there is a high chance of drawing a blank shell; otherwise, shoot the Dealer. Threshold is dynamically adjusted based on remaining shells.',
     'Probability-Based': 'Decide based on the probabilities of live vs. blank shells. Shoot self if the chance of drawing a blank is higher.'
 }
 
@@ -23,9 +23,11 @@ dealer_strategy_descriptions = {
 def player_aggressive_strategy(L, B, player_lives, dealer_lives):
     return 'shoot_dealer'
 
-def player_conservative_strategy(L, B, player_lives, dealer_lives, threshold=0.7):
+def player_conservative_strategy(L, B, player_lives, dealer_lives):
     if (L + B) == 0:
         return 'shoot_dealer'
+    # Dynamic threshold based on the remaining number of shells
+    threshold = 0.5 + (B / (L + B)) * 0.5  # Adjust threshold dynamically based on remaining blank shells
     p_blank = B / (L + B)
     return 'shoot_self' if p_blank > threshold else 'shoot_dealer'
 
@@ -77,9 +79,10 @@ def simulate_buckshot_game(
     player_wins = dealer_wins = draws = 0
     probability_trends = []
     clip_outcomes = []
+    turn_counts = []
 
     for _ in range(rounds):
-        winner, game_probabilities, clip_probabilities = simulate_single_game(
+        winner, game_probabilities, clip_probabilities, turns = simulate_single_game(
             live_shells, blank_shells, initial_player_lives, initial_dealer_lives,
             player_strategy, dealer_strategy, player_threshold, dealer_risk_tolerance, dealer_caution_level, dealer_bluff_factor
         )
@@ -91,6 +94,7 @@ def simulate_buckshot_game(
             draws += 1
         probability_trends.append(game_probabilities)
         clip_outcomes.append(clip_probabilities)
+        turn_counts.append(turns)
 
     total_games = player_wins + dealer_wins + draws
     player_win_rate = player_wins / total_games * 100
@@ -100,12 +104,15 @@ def simulate_buckshot_game(
     avg_prob_trend = calculate_average_probability_trend(probability_trends)
     avg_clip_trend = calculate_average_probability_trend([clip for game in clip_outcomes for clip in game])
 
+    percentiles = np.percentile(turn_counts, [25, 50, 75, 90])
+
     return {
         'player_win_rate': player_win_rate,
         'dealer_win_rate': dealer_win_rate,
         'draw_rate': draw_rate,
         'average_prob_trend': avg_prob_trend,
-        'average_clip_trend': avg_clip_trend
+        'average_clip_trend': avg_clip_trend,
+        'turn_percentiles': percentiles
     }
 
 def simulate_single_game(
@@ -118,6 +125,7 @@ def simulate_single_game(
     turn = 'player'
     game_probabilities = []
     clip_probabilities = []
+    turns = 0
 
     while player_lives > 0 and dealer_lives > 0:
         if shell_index >= len(shells):
@@ -136,7 +144,7 @@ def simulate_single_game(
 
         current_shell = shells[shell_index]
         if turn == 'player':
-            action = player_strategy(L, B, player_lives, dealer_lives, player_threshold) if player_strategy == player_conservative_strategy else player_strategy(L, B, player_lives, dealer_lives)
+            action = player_strategy(L, B, player_lives, dealer_lives) if player_strategy == player_conservative_strategy else player_strategy(L, B, player_lives, dealer_lives)
             if action == 'shoot_self':
                 player_lives -= 1 if current_shell == 'live' else 0
             else:
@@ -151,9 +159,10 @@ def simulate_single_game(
         # Always switch turns after each shot
         turn = 'dealer' if turn == 'player' else 'player'  # Switch turn from player to dealer or vice versa
         shell_index += 1
+        turns += 1
 
     winner = 'dealer' if player_lives <= 0 else 'player' if dealer_lives <= 0 else 'draw'
-    return winner, game_probabilities, clip_probabilities
+    return winner, game_probabilities, clip_probabilities, turns
 
 def calculate_average_probability_trend(probability_trends):
     max_turns = max(len(game) for game in probability_trends)
@@ -266,6 +275,10 @@ def main():
             ax.set_xlabel("Turn Number")
             ax.set_ylabel("Probability")
             ax.legend()
+            ax.xaxis.label.set_color('white')
+            ax.yaxis.label.set_color('white')
+            ax.tick_params(axis='x', colors='white')
+            ax.tick_params(axis='y', colors='white')
             fig.patch.set_facecolor('black')
             ax.set_facecolor('black')
             st.pyplot(fig)
@@ -291,11 +304,16 @@ def main():
             sns.heatmap(heatmap_data, annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
             ax.set_xlabel("Dealer Strategy")
             ax.set_ylabel("Player Strategy")
+            ax.xaxis.label.set_color('white')
+            ax.yaxis.label.set_color('white')
+            ax.tick_params(axis='x', colors='white')
+            ax.tick_params(axis='y', colors='white')
             fig.patch.set_facecolor('black')
             ax.set_facecolor('black')
+            
             st.pyplot(fig)
 
-            # Cumulative Win Rate Plot
+            # Cumulative Win Rate Plot with Turn Percentile Banners
             st.subheader("Cumulative Win Rate Across Simulations")
             cumulative_player_wins = []
             cumulative_dealer_wins = []
@@ -306,7 +324,7 @@ def main():
             draws_cumulative = 0
 
             for i in range(1, rounds + 1):
-                result, _, _ = simulate_single_game(
+                result, _, _, _ = simulate_single_game(
                     live_shells, blank_shells, initial_player_lives, initial_dealer_lives,
                     selected_player_strategy, dealer_dynamic_strategy, player_threshold, dealer_risk_tolerance, dealer_caution_level, dealer_bluff_factor
                 )
@@ -326,9 +344,19 @@ def main():
             ax.plot(range(1, rounds + 1), cumulative_player_wins, label="Player Win Rate", color="blue")
             ax.plot(range(1, rounds + 1), cumulative_dealer_wins, label="Dealer Win Rate", color="red")
             ax.plot(range(1, rounds + 1), cumulative_draws, label="Draw Rate", color="gray")
+
+            # Adding percentile banners
+            percentiles = results['turn_percentiles']
+            for percentile, color in zip(percentiles, ['yellow', 'green', 'orange', 'purple']):
+                ax.axvspan(0, percentile, color=color, alpha=0.2, label=f'{percentile:.0f}th Percentile')
+
             ax.set_xlabel("Number of Simulations")
             ax.set_ylabel("Cumulative Win Rate (%)")
             ax.legend()
+            ax.xaxis.label.set_color('white')
+            ax.yaxis.label.set_color('white')
+            ax.tick_params(axis='x', colors='white')
+            ax.tick_params(axis='y', colors='white')
             fig.patch.set_facecolor('black')
             ax.set_facecolor('black')
             st.pyplot(fig)
