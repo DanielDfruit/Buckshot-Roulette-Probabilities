@@ -78,31 +78,31 @@ def simulate_game(shell_order, player_lives, dealer_lives, player_strategy, deal
             if action == 'shoot_self':
                 if current_shell == 'live':
                     current_player_lives -= 1
-                game_log.append(f"Player shoots self with {'live' if current_shell == 'live' else 'blank'} shell")
+                game_log.append(f"**Player** shoots self with {'live' if current_shell == 'live' else 'blank'} shell")
             else:
                 if current_shell == 'live':
                     current_dealer_lives -= 1
-                game_log.append(f"Player shoots dealer with {'live' if current_shell == 'live' else 'blank'} shell")
+                game_log.append(f"**Player** shoots dealer with {'live' if current_shell == 'live' else 'blank'} shell")
             current_turn = 'dealer'
         else:
             action = dealer_strategy(L, B, current_dealer_lives, current_player_lives)
             if action == 'shoot_self':
                 if current_shell == 'live':
                     current_dealer_lives -= 1
-                game_log.append(f"Dealer shoots self with {'live' if current_shell == 'live' else 'blank'} shell")
+                game_log.append(f"**Dealer** shoots self with {'live' if current_shell == 'live' else 'blank'} shell")
             else:
                 if current_shell == 'live':
                     current_player_lives -= 1
-                game_log.append(f"Dealer shoots player with {'live' if current_shell == 'live' else 'blank'} shell")
+                game_log.append(f"**Dealer** shoots player with {'live' if current_shell == 'live' else 'blank'} shell")
             current_turn = 'player'
 
         shell_index += 1
 
     if current_player_lives <= 0:
-        game_log.append("Dealer wins")
+        game_log.append("**Dealer** wins")
         return 'dealer', game_log
     elif current_dealer_lives <= 0:
-        game_log.append("Player wins")
+        game_log.append("**Player** wins")
         return 'player', game_log
     else:
         game_log.append("Draw")
@@ -152,9 +152,9 @@ def main():
     st.title("Buckshot Roulette Simulation with Different Play Styles")
 
     st.sidebar.header("Simulation Parameters")
-    max_shells = 5  # Reduced for computational feasibility
+    max_shells = 8  # Reduced for computational feasibility
     live_shells = st.sidebar.slider("Number of live shells", min_value=1, max_value=max_shells, value=1)
-    blank_shells = st.sidebar.slider("Number of blank shells", min_value=1, max_value=max_shells - live_shells, value=2)
+    blank_shells = st.sidebar.slider("Number of blank shells", min_value=1, max_value=max_shells - live_shells, value=1)
     total_shells = live_shells + blank_shells
 
     initial_player_lives = st.sidebar.slider("Player initial lives", min_value=1, max_value=5, value=1)
@@ -188,8 +188,8 @@ def main():
             )
         st.success('Simulation Complete!')
 
-        st.write(f"Player Win Rate: **{results['player_win_rate']:.2f}%**")
-        st.write(f"Dealer Win Rate: **{results['dealer_win_rate']:.2f}%**")
+        st.write(f"Player Win Rate: <span style='color: #1f77b4; font-weight: bold;'>{results['player_win_rate']:.2f}%</span>")
+        st.write(f"Dealer Win Rate: <span style='color: #ff7f0e; font-weight: bold;'>{results['dealer_win_rate']:.2f}%</span>")
         st.write(f"Draw Rate: **{results['draw_rate']:.2f}%**")
 
         # Create a DataFrame for plotting
@@ -204,6 +204,7 @@ def main():
 
         # Create a bar chart using Altair
         chart = alt.Chart(data).mark_bar().encode(
+            color=alt.Color('Outcome', scale=alt.Scale(domain=['Player Wins', 'Dealer Wins', 'Draws'], range=['#1f77b4', '#ff7f0e', '#2ca02c'])),
             x=alt.X('Outcome', sort=None),
             y='Win Rate (%)',
             color='Outcome'
@@ -217,8 +218,8 @@ def main():
 
         # Optionally, display the total counts
         st.subheader("Total Outcomes")
-        st.write(f"Total Player Wins: **{results['total_results']['player_wins']}**")
-        st.write(f"Total Dealer Wins: **{results['total_results']['dealer_wins']}**")
+        st.write(f"Total Player Wins: <span style='color: #1f77b4; font-weight: bold;'>{results['total_results']['player_wins']}</span>")
+        st.write(f"Total Dealer Wins: <span style='color: #ff7f0e; font-weight: bold;'>{results['total_results']['dealer_wins']}</span>")
         st.write(f"Total Draws: **{results['total_results']['draws']}**")
 
         # Display detailed logs for each game
@@ -228,6 +229,10 @@ def main():
             for entry in log:
                 st.write(entry)
             st.write("---")
+
+if __name__ == "__main__":
+    main()
+
 
 if __name__ == "__main__":
     main()
