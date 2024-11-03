@@ -30,11 +30,18 @@ def player_conservative_strategy(L, B, player_lives, dealer_lives, threshold=0.7
     return 'shoot_self' if p_blank > threshold else 'shoot_dealer'
 
 def player_probability_based_strategy(L, B, player_lives, dealer_lives):
+    # Ensure that L + B is not zero to avoid division by zero
     if (L + B) == 0:
-        return 'shoot_dealer'
+        return 'shoot_dealer'  # Default action when no shells are left
+
     p_live = L / (L + B)
     p_blank = B / (L + B)
-    return 'shoot_self' if p_blank > p_live else 'shoot_dealer'
+
+    # The strategy: shoot self if blank probability is higher than live probability
+    if p_blank > p_live:
+        return 'shoot_self'
+    else:
+        return 'shoot_dealer'
 
 # Enhanced dealer strategy function with AI behavior settings
 def dealer_dynamic_strategy(L, B, dealer_lives, player_lives, risk_tolerance, caution_level, bluff_factor):
