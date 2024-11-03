@@ -156,27 +156,68 @@ def calculate_average_probability_trend(probability_trends):
 
     return avg_prob_trend
 
-# Streamlit App Code
 def main():
     st.title("Buckshot Roulette Simulation with Probability Analysis")
 
-    st.sidebar.header("Simulation Parameters")
-    rounds = st.sidebar.number_input("Number of rounds to simulate", min_value=100, max_value=100000, value=1000, step=100)
-    live_shells = st.sidebar.slider("Number of live shells", min_value=1, max_value=10, value=2)
-    blank_shells = st.sidebar.slider("Number of blank shells", min_value=1, max_value=10, value=2)
-    initial_player_lives = st.sidebar.slider("Player initial lives", min_value=1, max_value=10, value=2)
-    initial_dealer_lives = st.sidebar.slider("Dealer initial lives", min_value=1, max_value=10, value=2)
+    # Create tabs for simulation and rules
+    tab_simulation, tab_rules = st.tabs(["Simulation", "Rules"])
 
-    st.sidebar.header("Strategy Selection")
-    player_strategy_option = st.sidebar.selectbox("Select Player Strategy", ("Aggressive", "Conservative", "Probability-Based"))
-    player_threshold = st.sidebar.slider("Player Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7) if player_strategy_option == 'Conservative' else 0.7
-    dealer_strategy_option = st.sidebar.selectbox("Select Dealer Strategy", ("Aggressive", "Conservative", "Probability-Based", "Random"))
-    dealer_threshold = st.sidebar.slider("Dealer Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7) if dealer_strategy_option == 'Conservative' else 0.7
+    # Rules Tab Content
+    with tab_rules:
+        st.header("Game Rules for Buckshot Roulette Simulation")
+        st.markdown("""
+        In this simulation of Buckshot Roulette, the following rules and conditions are applied:
+        
+        1. **Game Structure**:
+           - The game consists of a shotgun loaded with a combination of live and blank shells in a random order.
+           - The player and the Dealer take turns choosing to shoot either themselves or their opponent.
 
-    player_strategies = {'Aggressive': player_aggressive_strategy, 'Conservative': player_conservative_strategy, 'Probability-Based': player_probability_based_strategy}
-    dealer_strategies = {'Aggressive': dealer_aggressive_strategy, 'Conservative': dealer_conservative_strategy, 'Probability-Based': dealer_probability_based_strategy, 'Random': dealer_random_strategy}
-    selected_player_strategy = player_strategies[player_strategy_option]
-    selected_dealer_strategy = dealer_strategies[dealer_strategy_option]
+        2. **Rounds and Reloading**:
+           - If all shells are used up without a winner, the shotgun is reloaded with a new random order of live and blank shells.
+           - The number of live and blank shells can be adjusted by the user.
+           - The simulation ends when one party (either the player or the Dealer) depletes all of their "lives."
+
+        3. **Lives**:
+           - Both the player and Dealer start with an initial number of lives, which can be adjusted in the settings.
+           - A live shell shot reduces the chosen target’s lives by one.
+
+        4. **Turn-Based Actions**:
+           - On each turn, the player or Dealer can choose to shoot themselves or the other.
+           - The choice of shooting depends on the selected strategy:
+             - **Aggressive**: Always shoot the opponent.
+             - **Conservative**: Shoot themselves if there is a high probability of drawing a blank shell; otherwise, shoot the opponent.
+             - **Probability-Based**: Based on the probability of live vs. blank shells, shoot themselves if the chance of a blank is higher.
+
+        5. **Outcome Determination**:
+           - A blank shell shot results in a missed turn but does not reduce lives.
+           - A live shell shot reduces the target’s lives by one.
+           - The simulation tracks the cumulative outcomes over the defined number of rounds.
+           - The game outcome is either a win for the player, a win for the Dealer, or a draw if neither loses all lives in the set rounds.
+
+        6. **Visualization**:
+           - This simulation generates a series of visualizations, including win rates by strategy, cumulative win rates over time, and the probability of drawing live or blank shells across turns.
+        """)
+
+    # Simulation Tab Content
+    with tab_simulation:
+        st.sidebar.header("Simulation Parameters")
+        rounds = st.sidebar.number_input("Number of rounds to simulate", min_value=100, max_value=100000, value=1000, step=100)
+        live_shells = st.sidebar.slider("Number of live shells", min_value=1, max_value=10, value=2)
+        blank_shells = st.sidebar.slider("Number of blank shells", min_value=1, max_value=10, value=2)
+        initial_player_lives = st.sidebar.slider("Player initial lives", min_value=1, max_value=10, value=2)
+        initial_dealer_lives = st.sidebar.slider("Dealer initial lives", min_value=1, max_value=10, value=2)
+
+        st.sidebar.header("Strategy Selection")
+        player_strategy_option = st.sidebar.selectbox("Select Player Strategy", ("Aggressive", "Conservative", "Probability-Based"))
+        player_threshold = st.sidebar.slider("Player Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7) if player_strategy_option == 'Conservative' else 0.7
+        dealer_strategy_option = st.sidebar.selectbox("Select Dealer Strategy", ("Aggressive", "Conservative", "Probability-Based", "Random"))
+        dealer_threshold = st.sidebar.slider("Dealer Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7) if dealer_strategy_option == 'Conservative' else 0.7
+
+        player_strategies = {'Aggressive': player_aggressive_strategy, 'Conservative': player_conservative_strategy, 'Probability-Based': player_probability_based_strategy}
+        dealer_strategies = {'Aggressive': dealer_aggressive_strategy, 'Conservative': dealer_conservative_strategy, 'Probability-Based': dealer_probability_based_strategy, 'Random': dealer_random_strategy}
+        selected_player_strategy = player_strategies[player_strategy_option]
+        selected_dealer_strategy = dealer_strategies[dealer_strategy_option]
+
 
     if st.button("Run Simulation"):
         with st.spinner('Simulating games...'):
