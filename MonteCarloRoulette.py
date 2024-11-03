@@ -186,9 +186,6 @@ def simulate_all_possible_games(
 ):
     results = {'player_wins': 0, 'dealer_wins': 0, 'draws': 0}
     all_permutations = generate_sample_permutations(live_shells, blank_shells)
-    optimal_first_play = {}
-    all_permutations = generate_sample_permutations(live_shells, blank_shells)
-    player_wins = dealer_wins = draws = 0
     graph = nx.DiGraph()
     graph.add_node("root", label="Start")
 
@@ -200,11 +197,9 @@ def simulate_all_possible_games(
 
     visualize_game_paths(graph)
 
-    return {
-        'player_wins': player_wins,
-        'dealer_wins': dealer_wins,
-        'draws': draws
-    }
+    # Return the correct results dictionary
+    return results
+
 
 # Streamlit interface
 def main():
@@ -251,4 +246,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
