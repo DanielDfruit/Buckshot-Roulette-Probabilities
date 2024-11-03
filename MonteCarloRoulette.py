@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+from itertools import product
 
 # Strategy descriptions
 player_strategy_descriptions = {
@@ -31,8 +32,9 @@ def player_conservative_strategy(L, B, player_lives, dealer_lives, threshold=0.7
 def player_probability_based_strategy(L, B, player_lives, dealer_lives):
     if (L + B) == 0:
         return 'shoot_dealer'
+    p_live = L / (L + B)
     p_blank = B / (L + B)
-    return 'shoot_self' if p_blank > 0.6 else 'shoot_dealer'
+    return 'shoot_self' if p_blank > p_live else 'shoot_dealer'
 
 # Enhanced dealer strategy function with AI behavior settings
 def dealer_dynamic_strategy(L, B, dealer_lives, player_lives, risk_tolerance, caution_level, bluff_factor):
@@ -44,11 +46,9 @@ def dealer_dynamic_strategy(L, B, dealer_lives, player_lives, risk_tolerance, ca
 
     p_blank = B / (L + B)
     if dealer_lives <= player_lives * risk_tolerance:
-        return 'shoot_player'
-    elif p_blank > caution_level:
-        return 'shoot_self'
+        return 'shoot_player' if np.random.rand() > p_blank else 'shoot_self'
     else:
-        return 'shoot_player'
+        return 'shoot_self' if p_blank > caution_level else 'shoot_player'
 
 # Shell reload function
 def reload_shells(live_shells, blank_shells):
@@ -174,7 +174,7 @@ def main():
     st.title("Buckshot Roulette Simulation with Enhanced Dealer AI")
 
     # Create tabs for simulation and rules
-    tab_simulation, tab_rules = st.tabs(["Simulation", "Rules"])
+    tab_simulation, tab_rules, tab_charts = st.tabs(["Simulation", "Rules", "Charts"])
 
     # Rules Tab Content
     with tab_rules:
@@ -245,68 +245,72 @@ def main():
             st.write(f"Dealer Win Rate: **{results['dealer_win_rate']:.2f}%**")
             st.write(f"Draw Rate: **{results['draw_rate']:.2f}%**")
 
-            # Probability Trend Plot for a Single Clip
-            st.subheader("Probability of Drawing a Live or Blank Shell by Turn (Within a Single Clip)")
-            avg_clip_trend = results['average_clip_trend']
-            clip_turns = range(1, len(avg_clip_trend) + 1)
-            p_live_clip = [prob['p_live'] for prob in avg_clip_trend]
-            p_blank_clip = [prob['p_blank'] for prob in avg_clip_trend]
+    # Charts Tab Content
+    with tab_charts:
+        st.header("Simulation Charts")
 
-            fig, ax = plt.subplots()
-            ax.plot(clip_turns, p_live_clip, label='Probability of Live Shell', color="blue", marker='o')
-            ax.plot(clip_turns, p_blank_clip, label='Probability of Blank Shell', color="orange", marker='o')
-            ax.set_xlabel("Turn Number Within Clip")
-            ax.set_ylabel("Probability")
-            ax.legend()
-            fig.patch.set_facecolor('black')
-            ax.set_facecolor('black')
-            st.pyplot(fig)
+        # Probability Trend Plot for a Single Clip
+        st.subheader("Probability of Drawing a Live or Blank Shell by Turn (Within a Single Clip)")
+        avg_clip_trend = results['average_clip_trend']
+        clip_turns = range(1, len(avg_clip_trend) + 1)
+        p_live_clip = [prob['p_live'] for prob in avg_clip_trend]
+        p_blank_clip = [prob['p_blank'] for prob in avg_clip_trend]
 
-            # Probability Trend Plot for the Entire Game
-            st.subheader("Probability of Drawing a Live or Blank Shell by Turn (Across All Clips)")
-            avg_prob_trend = results['average_prob_trend']
-            turns = range(1, len(avg_prob_trend) + 1)
-            p_live = [prob['p_live'] for prob in avg_prob_trend]
-            p_blank = [prob['p_blank'] for prob in avg_prob_trend]
+        fig, ax = plt.subplots()
+        ax.plot(clip_turns, p_live_clip, label='Probability of Live Shell', color="blue", marker='o')
+        ax.plot(clip_turns, p_blank_clip, label='Probability of Blank Shell', color="orange", marker='o')
+        ax.set_xlabel("Turn Number Within Clip")
+        ax.set_ylabel("Probability")
+        ax.legend()
+        fig.patch.set_facecolor('black')
+        ax.set_facecolor('black')
+        st.pyplot(fig)
 
-            fig, ax = plt.subplots()
-            ax.plot(turns, p_live, label='Probability of Live Shell', color="blue", marker='o')
-            ax.plot(turns, p_blank, label='Probability of Blank Shell', color="orange", marker='o')
-            ax.set_xlabel("Turn Number Across Clips")
-            ax.set_ylabel("Probability")
-            ax.legend()
-            fig.patch.set_facecolor('black')
-            ax.set_facecolor('black')
-            st.pyplot(fig)
+        # Probability Trend Plot for the Entire Game
+        st.subheader("Probability of Drawing a Live or Blank Shell by Turn (Across All Clips)")
+        avg_prob_trend = results['average_prob_trend']
+        turns = range(1, len(avg_prob_trend) + 1)
+        p_live = [prob['p_live'] for prob in avg_prob_trend]
+        p_blank = [prob['p_blank'] for prob in avg_prob_trend]
 
-            # Heatmap of Win Probability by Strategy
-            st.subheader("Heatmap of Win Probability by Player and Dealer Strategy")
-            strategies = list(player_strategies.keys())
-            dealer_strategies = list(dealer_strategy_descriptions.keys())
-            win_rates = np.zeros((len(strategies), len(dealer_strategies)))
+        fig, ax = plt.subplots()
+        ax.plot(turns, p_live, label='Probability of Live Shell', color="blue", marker='o')
+        ax.plot(turns, p_blank, label='Probability of Blank Shell', color="orange", marker='o')
+        ax.set_xlabel("Turn Number Across Clips")
+        ax.set_ylabel("Probability")
+        ax.legend()
+        fig.patch.set_facecolor('black')
+        ax.set_facecolor('black')
+        st.pyplot(fig)
 
-            for i, p_strategy in enumerate(strategies):
-                for j, d_strategy in enumerate(dealer_strategies):
-                    win_results = simulate_buckshot_game(
-                        rounds=100,  # Use a smaller number of rounds for visualization purposes
-                        live_shells=live_shells,
-                        blank_shells=blank_shells,
-                        initial_player_lives=initial_player_lives,
-                        initial_dealer_lives=initial_dealer_lives,
-                        player_strategy=player_strategies[p_strategy],
-                        dealer_strategy=dealer_dynamic_strategy,
-                        player_threshold=player_threshold,
-                        dealer_risk_tolerance=dealer_risk_tolerance,
-                        dealer_caution_level=dealer_caution_level,
-                        dealer_bluff_factor=dealer_bluff_factor
-                    )
-                    win_rates[i, j] = win_results['player_win_rate']
+        # Heatmap of Win Probability by Strategy
+        st.subheader("Heatmap of Win Probability by Player and Dealer Strategy")
+        strategies = list(player_strategies.keys())
+        dealer_strategies = list(dealer_strategy_descriptions.keys())
+        win_rates = np.zeros((len(strategies), len(dealer_strategies)))
 
-            fig, ax = plt.subplots()
-            sns.heatmap(win_rates, annot=True, fmt=".1f", cmap="YlGnBu", xticklabels=dealer_strategies, yticklabels=strategies, ax=ax)
-            ax.set_xlabel("Dealer Strategy")
-            ax.set_ylabel("Player Strategy")
-            st.pyplot(fig)
+        for i, p_strategy in enumerate(strategies):
+            for j, d_strategy in enumerate(dealer_strategies):
+                win_results = simulate_buckshot_game(
+                    rounds=100,  # Use a smaller number of rounds for visualization purposes
+                    live_shells=live_shells,
+                    blank_shells=blank_shells,
+                    initial_player_lives=initial_player_lives,
+                    initial_dealer_lives=initial_dealer_lives,
+                    player_strategy=player_strategies[p_strategy],
+                    dealer_strategy=dealer_dynamic_strategy,
+                    player_threshold=player_threshold,
+                    dealer_risk_tolerance=dealer_risk_tolerance,
+                    dealer_caution_level=dealer_caution_level,
+                    dealer_bluff_factor=dealer_bluff_factor
+                )
+                win_rates[i, j] = win_results['player_win_rate']
+
+        fig, ax = plt.subplots()
+        sns.heatmap(win_rates, annot=True, fmt=".1f", cmap="YlGnBu", xticklabels=dealer_strategies, yticklabels=strategies, ax=ax)
+        ax.set_xlabel("Dealer Strategy")
+        ax.set_ylabel("Player Strategy")
+        st.pyplot(fig)
 
 if __name__ == "__main__":
     main()
