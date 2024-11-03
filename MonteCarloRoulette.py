@@ -154,9 +154,11 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
 
 # Visualize paths with PyVis
 def visualize_game_paths(graph):
-    net = Network(notebook=False, height="750px", width="100%")
+    net = Network(notebook=False, height="750px", width="100%", cdn_resources='local')
     net.from_nx(graph)
-    net.show("game_paths.html")
+    net.write_html("game_paths.html")
+    # Display link to generated HTML in Streamlit
+    st.markdown(f"[View Game Paths](game_paths.html)", unsafe_allow_html=True)
 
 # Main simulation loop
 def simulate_all_possible_games(
