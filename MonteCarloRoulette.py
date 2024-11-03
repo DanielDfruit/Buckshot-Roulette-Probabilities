@@ -309,6 +309,48 @@ def main():
         ax.set_xlabel("Dealer Strategy")
         ax.set_ylabel("Player Strategy")
         st.pyplot(fig)
+# Plot Cumulative Win Rates Across Simulations
+st.subheader("Cumulative Win Rate Across Simulations")
+
+# Track cumulative win rates over all simulations
+cumulative_player_wins = []
+cumulative_dealer_wins = []
+cumulative_draws = []
+
+# Run each simulation and track cumulative win rates
+player_cumulative_wins = 0
+dealer_cumulative_wins = 0
+draws_cumulative = 0
+
+for i in range(1, rounds + 1):
+    # Run a single game and check the winner
+    result, _ = simulate_single_game(
+        live_shells, blank_shells, initial_player_lives, initial_dealer_lives,
+        selected_player_strategy, selected_dealer_strategy, player_threshold, dealer_threshold
+    )
+    
+    # Update cumulative counts based on the result
+    if result == 'player':
+        player_cumulative_wins += 1
+    elif result == 'dealer':
+        dealer_cumulative_wins += 1
+    else:
+        draws_cumulative += 1
+    
+    # Calculate cumulative win rates
+    cumulative_player_wins.append(player_cumulative_wins / i * 100)
+    cumulative_dealer_wins.append(dealer_cumulative_wins / i * 100)
+    cumulative_draws.append(draws_cumulative / i * 100)
+
+# Plot cumulative win rates
+fig, ax = plt.subplots()
+ax.plot(range(1, rounds + 1), cumulative_player_wins, label="Player Win Rate", color="blue")
+ax.plot(range(1, rounds + 1), cumulative_dealer_wins, label="Dealer Win Rate", color="red")
+ax.plot(range(1, rounds + 1), cumulative_draws, label="Draw Rate", color="gray")
+ax.set_xlabel("Number of Simulations")
+ax.set_ylabel("Cumulative Win Rate (%)")
+ax.legend()
+st.pyplot(fig)
 
 if __name__ == "__main__":
     main()
