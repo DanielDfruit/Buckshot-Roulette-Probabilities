@@ -2,8 +2,9 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from itertools import product
 import seaborn as sns
+from itertools import product
+
 # Strategy descriptions
 player_strategy_descriptions = {
     'Aggressive': 'Always shoot the Dealer.',
@@ -26,20 +27,14 @@ def player_conservative_strategy(L, B, player_lives, dealer_lives, threshold=0.7
     if (L + B) == 0:
         return 'shoot_dealer'
     p_blank = B / (L + B)
-    if p_blank > threshold:
-        return 'shoot_self'
-    else:
-        return 'shoot_dealer'
+    return 'shoot_self' if p_blank > threshold else 'shoot_dealer'
 
 def player_probability_based_strategy(L, B, player_lives, dealer_lives):
     if (L + B) == 0:
         return 'shoot_dealer'
     p_live = L / (L + B)
     p_blank = B / (L + B)
-    if p_blank > p_live:
-        return 'shoot_self'
-    else:
-        return 'shoot_dealer'
+    return 'shoot_self' if p_blank > p_live else 'shoot_dealer'
 
 def dealer_aggressive_strategy(L, B, dealer_lives, player_lives):
     return 'shoot_player'
@@ -48,20 +43,14 @@ def dealer_conservative_strategy(L, B, dealer_lives, player_lives, threshold=0.7
     if (L + B) == 0:
         return 'shoot_player'
     p_blank = B / (L + B)
-    if p_blank > threshold:
-        return 'shoot_self'
-    else:
-        return 'shoot_player'
+    return 'shoot_self' if p_blank > threshold else 'shoot_player'
 
 def dealer_probability_based_strategy(L, B, dealer_lives, player_lives):
     if (L + B) == 0:
         return 'shoot_player'
     p_live = L / (L + B)
     p_blank = B / (L + B)
-    if p_blank > p_live:
-        return 'shoot_self'
-    else:
-        return 'shoot_player'
+    return 'shoot_self' if p_blank > p_live else 'shoot_player'
 
 def dealer_random_strategy(L, B, dealer_lives, player_lives):
     return np.random.choice(['shoot_self', 'shoot_player'])
@@ -78,42 +67,27 @@ def simulate_buckshot_game(
     player_threshold=0.7,
     dealer_threshold=0.7
 ):
-    # Initialize data collection
-    player_wins = 0
-    dealer_wins = 0
-    draws = 0
+    player_wins = dealer_wins = draws = 0
     probability_trends = []  # Track probability at each turn
 
-    # Simulate games
     for _ in range(rounds):
         winner, game_probabilities = simulate_single_game(
-            live_shells,
-            blank_shells,
-            initial_player_lives,
-            initial_dealer_lives,
-            player_strategy,
-            dealer_strategy,
-            player_threshold,
-            dealer_threshold
+            live_shells, blank_shells, initial_player_lives, initial_dealer_lives,
+            player_strategy, dealer_strategy, player_threshold, dealer_threshold
         )
-        # Update win counts
         if winner == 'player':
             player_wins += 1
         elif winner == 'dealer':
             dealer_wins += 1
         else:
             draws += 1
-
-        # Append game probabilities
         probability_trends.append(game_probabilities)
 
-    # Calculate win rates
     total_games = player_wins + dealer_wins + draws
     player_win_rate = player_wins / total_games * 100
     dealer_win_rate = dealer_wins / total_games * 100
     draw_rate = draws / total_games * 100
 
-    # Aggregate probabilities over all games
     avg_prob_trend = calculate_average_probability_trend(probability_trends)
 
     return {
@@ -124,103 +98,50 @@ def simulate_buckshot_game(
     }
 
 def simulate_single_game(
-    live_shells,
-    blank_shells,
-    player_lives,
-    dealer_lives,
-    player_strategy,
-    dealer_strategy,
-    player_threshold=0.7,
-    dealer_threshold=0.7
+    live_shells, blank_shells, player_lives, dealer_lives,
+    player_strategy, dealer_strategy, player_threshold=0.7, dealer_threshold=0.7
 ):
-    # Initialize game state
     shells = []
-    shell_index = 0  # Tracks the current shell
-    turn = 'player'  # 'player' or 'dealer'
-    game_probabilities = []  # Track probability at each turn
+    shell_index = 0
+    turn = 'player'
+    game_probabilities = []
 
     while player_lives > 0 and dealer_lives > 0:
-        # Check if we need to reload the shotgun
         if shell_index >= len(shells):
-            # Reload the shotgun
             shells = ['live'] * live_shells + ['blank'] * blank_shells
             np.random.shuffle(shells)
-            shell_index = 0  # Reset the shell index
+            shell_index = 0
 
         L = shells[shell_index:].count('live')
         B = shells[shell_index:].count('blank')
         total_shells = L + B
-        if total_shells > 0:
-            p_live = L / total_shells
-            p_blank = B / total_shells
-        else:
-            p_live = p_blank = 0
-
-        # Record the probability of drawing a live and blank shell
+        p_live = L / total_shells if total_shells > 0 else 0
+        p_blank = B / total_shells if total_shells > 0 else 0
         game_probabilities.append({'p_live': p_live, 'p_blank': p_blank})
 
         current_shell = shells[shell_index]
         if turn == 'player':
-            # Decide action based on strategy
-            if player_strategy == player_conservative_strategy:
-                action = player_strategy(L, B, player_lives, dealer_lives, threshold=player_threshold)
-            else:
-                action = player_strategy(L, B, player_lives, dealer_lives)
-
+            action = player_strategy(L, B, player_lives, dealer_lives, player_threshold) if player_strategy == player_conservative_strategy else player_strategy(L, B, player_lives, dealer_lives)
             if action == 'shoot_self':
-                if current_shell == 'live':
-                    player_lives -= 1
-                    turn = 'dealer'
-                else:
-                    pass  # Player retains the turn
-            elif action == 'shoot_dealer':
-                if current_shell == 'live':
-                    dealer_lives -= 1
-                    turn = 'dealer'
-                else:
-                    turn = 'dealer'
+                player_lives -= 1 if current_shell == 'live' else 0
             else:
-                raise ValueError("Invalid action from player")
-        elif turn == 'dealer':
-            # Decide action based on strategy
-            if dealer_strategy == dealer_conservative_strategy:
-                action = dealer_strategy(L, B, dealer_lives, player_lives, threshold=dealer_threshold)
-            else:
-                action = dealer_strategy(L, B, dealer_lives, player_lives)
-
-            if action == 'shoot_self':
-                if current_shell == 'live':
-                    dealer_lives -= 1
-                    turn = 'player'
-                else:
-                    pass  # Dealer retains the turn
-            elif action == 'shoot_player':
-                if current_shell == 'live':
-                    player_lives -= 1
-                    turn = 'player'
-                else:
-                    turn = 'player'
-            else:
-                raise ValueError("Invalid action from dealer")
+                dealer_lives -= 1 if current_shell == 'live' else 0
+            turn = 'dealer' if current_shell == 'blank' else turn
         else:
-            raise ValueError("Invalid turn")
+            action = dealer_strategy(L, B, dealer_lives, player_lives, dealer_threshold) if dealer_strategy == dealer_conservative_strategy else dealer_strategy(L, B, dealer_lives, player_lives)
+            if action == 'shoot_self':
+                dealer_lives -= 1 if current_shell == 'live' else 0
+            else:
+                player_lives -= 1 if current_shell == 'live' else 0
+            turn = 'player' if current_shell == 'blank' else turn
 
-        # Update shell index
         if action in ['shoot_self', 'shoot_dealer', 'shoot_player']:
             shell_index += 1
 
-    # Determine the winner
-    if player_lives <= 0:
-        winner = 'dealer'
-    elif dealer_lives <= 0:
-        winner = 'player'
-    else:
-        winner = 'draw'
-
+    winner = 'dealer' if player_lives <= 0 else 'player' if dealer_lives <= 0 else 'draw'
     return winner, game_probabilities
 
 def calculate_average_probability_trend(probability_trends):
-    """Calculate average probability trend across all games."""
     max_turns = max(len(game) for game in probability_trends)
     avg_prob_trend = []
 
@@ -231,11 +152,7 @@ def calculate_average_probability_trend(probability_trends):
                 p_live_sum += game[turn]['p_live']
                 p_blank_sum += game[turn]['p_blank']
                 count += 1
-
-        if count > 0:
-            avg_prob_trend.append({'p_live': p_live_sum / count, 'p_blank': p_blank_sum / count})
-        else:
-            avg_prob_trend.append({'p_live': None, 'p_blank': None})
+        avg_prob_trend.append({'p_live': p_live_sum / count, 'p_blank': p_blank_sum / count} if count > 0 else {'p_live': None, 'p_blank': None})
 
     return avg_prob_trend
 
@@ -244,17 +161,17 @@ def main():
     st.title("Buckshot Roulette Simulation with Probability Analysis")
 
     st.sidebar.header("Simulation Parameters")
-    rounds = st.sidebar.number_input("Number of rounds to simulate", min_value=100, max_value=100000, value=1000, step=100, key='rounds_input')
-    live_shells = st.sidebar.slider("Number of live shells", min_value=1, max_value=10, value=2, key='live_shells_slider')
-    blank_shells = st.sidebar.slider("Number of blank shells", min_value=1, max_value=10, value=2, key='blank_shells_slider')
-    initial_player_lives = st.sidebar.slider("Player initial lives", min_value=1, max_value=10, value=2, key='player_lives_slider')
-    initial_dealer_lives = st.sidebar.slider("Dealer initial lives", min_value=1, max_value=10, value=2, key='dealer_lives_slider')
+    rounds = st.sidebar.number_input("Number of rounds to simulate", min_value=100, max_value=100000, value=1000, step=100)
+    live_shells = st.sidebar.slider("Number of live shells", min_value=1, max_value=10, value=2)
+    blank_shells = st.sidebar.slider("Number of blank shells", min_value=1, max_value=10, value=2)
+    initial_player_lives = st.sidebar.slider("Player initial lives", min_value=1, max_value=10, value=2)
+    initial_dealer_lives = st.sidebar.slider("Dealer initial lives", min_value=1, max_value=10, value=2)
 
     st.sidebar.header("Strategy Selection")
-    player_strategy_option = st.sidebar.selectbox("Select Player Strategy", ("Aggressive", "Conservative", "Probability-Based"), key='player_strategy_select')
-    player_threshold = st.sidebar.slider("Player Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7, key='player_threshold_slider') if player_strategy_option == 'Conservative' else 0.7
-    dealer_strategy_option = st.sidebar.selectbox("Select Dealer Strategy", ("Aggressive", "Conservative", "Probability-Based", "Random"), key='dealer_strategy_select')
-    dealer_threshold = st.sidebar.slider("Dealer Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7, key='dealer_threshold_slider') if dealer_strategy_option == 'Conservative' else 0.7
+    player_strategy_option = st.sidebar.selectbox("Select Player Strategy", ("Aggressive", "Conservative", "Probability-Based"))
+    player_threshold = st.sidebar.slider("Player Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7) if player_strategy_option == 'Conservative' else 0.7
+    dealer_strategy_option = st.sidebar.selectbox("Select Dealer Strategy", ("Aggressive", "Conservative", "Probability-Based", "Random"))
+    dealer_threshold = st.sidebar.slider("Dealer Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7) if dealer_strategy_option == 'Conservative' else 0.7
 
     player_strategies = {'Aggressive': player_aggressive_strategy, 'Conservative': player_conservative_strategy, 'Probability-Based': player_probability_based_strategy}
     dealer_strategies = {'Aggressive': dealer_aggressive_strategy, 'Conservative': dealer_conservative_strategy, 'Probability-Based': dealer_probability_based_strategy, 'Random': dealer_random_strategy}
@@ -273,7 +190,7 @@ def main():
         st.write(f"Dealer Win Rate: **{results['dealer_win_rate']:.2f}%**")
         st.write(f"Draw Rate: **{results['draw_rate']:.2f}%**")
 
-        # Plot probability trends
+        # Probability Trend Plot
         st.subheader("Probability Trend of Drawing a Live or Blank Shell Over Turns")
         avg_prob_trend = results['average_prob_trend']
         turns = range(1, len(avg_prob_trend) + 1)
@@ -288,7 +205,7 @@ def main():
         ax.legend()
         st.pyplot(fig)
 
-        # Generate Heatmap
+        # Win Rate Heatmap for Strategy Combinations
         st.subheader("Win Rate Heatmap for Strategy Combinations")
         strategy_combinations = [(p, d) for p in player_strategies.keys() for d in dealer_strategies.keys()]
         win_rates = [
@@ -309,51 +226,43 @@ def main():
         ax.set_xlabel("Dealer Strategy")
         ax.set_ylabel("Player Strategy")
         st.pyplot(fig)
-# Ensure `rounds` is defined from Streamlit's sidebar or elsewhere in the main function
-rounds = st.sidebar.number_input("Number of rounds to simulate", min_value=100, max_value=100000, value=1000, step=100)
 
-# Plot Cumulative Win Rates Across Simulations
-st.subheader("Cumulative Win Rate Across Simulations")
+        # Cumulative Win Rate Plot
+        st.subheader("Cumulative Win Rate Across Simulations")
+        cumulative_player_wins = []
+        cumulative_dealer_wins = []
+        cumulative_draws = []
 
-# Track cumulative win rates over all simulations
-cumulative_player_wins = []
-cumulative_dealer_wins = []
-cumulative_draws = []
+        player_cumulative_wins = 0
+        dealer_cumulative_wins = 0
+        draws_cumulative = 0
 
-# Initialize counters for cumulative tracking
-player_cumulative_wins = 0
-dealer_cumulative_wins = 0
-draws_cumulative = 0
+        for i in range(1, rounds + 1):
+            result, _ = simulate_single_game(
+                live_shells, blank_shells, initial_player_lives, initial_dealer_lives,
+                selected_player_strategy, selected_dealer_strategy, player_threshold, dealer_threshold
+            )
+            
+            if result == 'player':
+                player_cumulative_wins += 1
+            elif result == 'dealer':
+                dealer_cumulative_wins += 1
+            else:
+                draws_cumulative += 1
+            
+            cumulative_player_wins.append(player_cumulative_wins / i * 100)
+            cumulative_dealer_wins.append(dealer_cumulative_wins / i * 100)
+            cumulative_draws.append(draws_cumulative / i * 100)
 
-for i in range(1, rounds + 1):
-    # Run a single game and check the winner
-    result, _ = simulate_single_game(
-        live_shells, blank_shells, initial_player_lives, initial_dealer_lives,
-        selected_player_strategy, selected_dealer_strategy, player_threshold, dealer_threshold
-    )
-    
-    # Update cumulative counts based on the result
-    if result == 'player':
-        player_cumulative_wins += 1
-    elif result == 'dealer':
-        dealer_cumulative_wins += 1
-    else:
-        draws_cumulative += 1
-    
-    # Calculate cumulative win rates
-    cumulative_player_wins.append(player_cumulative_wins / i * 100)
-    cumulative_dealer_wins.append(dealer_cumulative_wins / i * 100)
-    cumulative_draws.append(draws_cumulative / i * 100)
-
-# Plot cumulative win rates
-fig, ax = plt.subplots()
-ax.plot(range(1, rounds + 1), cumulative_player_wins, label="Player Win Rate", color="blue")
-ax.plot(range(1, rounds + 1), cumulative_dealer_wins, label="Dealer Win Rate", color="red")
-ax.plot(range(1, rounds + 1), cumulative_draws, label="Draw Rate", color="gray")
-ax.set_xlabel("Number of Simulations")
-ax.set_ylabel("Cumulative Win Rate (%)")
-ax.legend()
-st.pyplot(fig)
+        fig, ax = plt.subplots()
+        ax.plot(range(1, rounds + 1), cumulative_player_wins, label="Player Win Rate", color="blue")
+        ax.plot(range(1, rounds + 1), cumulative_dealer_wins, label="Dealer Win Rate", color="red")
+        ax.plot(range(1, rounds + 1), cumulative_draws, label="Draw Rate", color="gray")
+        ax.set_xlabel("Number of Simulations")
+        ax.set_ylabel("Cumulative Win Rate (%)")
+        ax.legend()
+        st.pyplot(fig)
 
 if __name__ == "__main__":
     main()
+
