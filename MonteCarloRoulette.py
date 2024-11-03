@@ -233,10 +233,10 @@ def main():
     # Sidebar parameters
     st.sidebar.header("Simulation Parameters")
     max_shells = 5  # Reduced for computational feasibility
-    live_shells = st.sidebar.slider("Number of live shells", min_value=1, max_value=max_shells, value=1)
-    blank_shells = st.sidebar.slider("Number of blank shells", min_value=1, max_value=max_shells - live_shells, value=2)
-    initial_player_lives = st.sidebar.slider("Player initial lives", min_value=1, max_value=5, value=1)
-    initial_dealer_lives = st.sidebar.slider("Dealer initial lives", min_value=1, max_value=5, value=1)
+    live_shells = st.sidebar.slider("Number of live shells", min_value=1, max_value=max_shells, value=1, key='live_shells')
+    blank_shells = st.sidebar.slider("Number of blank shells", min_value=1, max_value=max_shells - live_shells, value=2, key='blank_shells')
+    initial_player_lives = st.sidebar.slider("Player initial lives", min_value=1, max_value=5, value=1, key='player_initial_lives')
+    initial_dealer_lives = st.sidebar.slider("Dealer initial lives", min_value=1, max_value=5, value=1, key='dealer_initial_lives')
 
     # Strategy selection
     st.sidebar.header("Strategy Selection")
@@ -293,9 +293,6 @@ def main():
         )
         st.altair_chart(outcome_pie_chart, use_container_width=True)
         
-
-if __name__ == "__main__":
-    main()
 
 if __name__ == "__main__":
     main()
