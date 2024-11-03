@@ -4,111 +4,136 @@ import pandas as pd
 from itertools import permutations
 import altair as alt
 
-# Game simulation functions
+# Strategy descriptions
+player_strategy_descriptions = {
+    'Aggressive': 'Always shoot the Dealer when it is your turn.',
+    'Conservative': 'Shoot self when there is a high chance of drawing a blank shell; otherwise, shoot the Dealer.',
+    'Probability-Based': 'Decide based on the probabilities of live vs. blank shells. Shoot self if the chance of drawing a blank is higher.'
+}
+
+dealer_strategy_descriptions = {
+    'Aggressive': 'Always shoot the player.',
+    'Conservative': 'Shoot self when there is a high chance of drawing a blank shell; otherwise, shoot the player.',
+    'Probability-Based': 'Decide based on the probabilities of live vs. blank shells. Shoot self if the chance of drawing a blank is higher.'
+}
+
+# Strategy functions
+def player_aggressive_strategy(L, B, player_lives, dealer_lives):
+    return 'shoot_dealer'
+
+def player_conservative_strategy(L, B, player_lives, dealer_lives):
+    if (L + B) == 0:
+        return 'shoot_dealer'
+    # Dynamic threshold based on the remaining number of shells
+    threshold = 0.5 + (B / (L + B)) * 0.5  # Adjust threshold dynamically based on remaining blank shells
+    p_blank = B / (L + B)
+    return 'shoot_self' if p_blank > threshold else 'shoot_dealer'
+
+def player_probability_based_strategy(L, B, player_lives, dealer_lives):
+    if (L + B) == 0:
+        return 'shoot_dealer'
+    p_live = L / (L + B)
+    p_blank = B / (L + B)
+    return 'shoot_self' if p_blank > p_live else 'shoot_dealer'
+
+# Dealer strategy functions
+def dealer_aggressive_strategy(L, B, dealer_lives, player_lives):
+    return 'shoot_player'
+
+def dealer_conservative_strategy(L, B, dealer_lives, player_lives):
+    if (L + B) == 0:
+        return 'shoot_player'
+    threshold = 0.5 + (B / (L + B)) * 0.5
+    p_blank = B / (L + B)
+    return 'shoot_self' if p_blank > threshold else 'shoot_player'
+
+def dealer_probability_based_strategy(L, B, dealer_lives, player_lives):
+    if (L + B) == 0:
+        return 'shoot_player'
+    p_live = L / (L + B)
+    p_blank = B / (L + B)
+    return 'shoot_self' if p_blank > p_live else 'shoot_player'
+
+# Generate all possible shell permutations
 def generate_all_permutations(live_shells, blank_shells):
     shells = ['live'] * live_shells + ['blank'] * blank_shells
     return list(set(permutations(shells)))  # Use set to avoid duplicate permutations
 
-def simulate_game_states(
-    shell_order,
-    player_lives,
-    dealer_lives,
-    shell_index,
-    current_turn,
-    results,
-    path=[]
-):
-    """
-    Recursively simulate all possible game states from the current state.
-    """
-    if player_lives <= 0:
-        results['dealer_wins'] += 1
-        return
-    if dealer_lives <= 0:
-        results['player_wins'] += 1
-        return
-    if shell_index >= len(shell_order):
-        results['draws'] += 1
-        return
+# Simulation functions
+def simulate_game(shell_order, player_lives, dealer_lives, player_strategy, dealer_strategy):
+    current_player_lives = player_lives
+    current_dealer_lives = dealer_lives
+    shell_index = 0
+    current_turn = 'player'
 
-    current_shell = shell_order[shell_index]
-
-    # Determine possible actions
-    actions = ['shoot_self', 'shoot_opponent']
-
-    for action in actions:
-        new_player_lives = player_lives
-        new_dealer_lives = dealer_lives
-        new_shell_index = shell_index + 1
-        new_turn = 'dealer' if current_turn == 'player' else 'player'
+    while current_player_lives > 0 and current_dealer_lives > 0 and shell_index < len(shell_order):
+        current_shell = shell_order[shell_index]
+        L = shell_order[shell_index:].count('live')
+        B = shell_order[shell_index:].count('blank')
 
         if current_turn == 'player':
+            action = player_strategy(L, B, current_player_lives, current_dealer_lives)
             if action == 'shoot_self':
-                if current_shell == 'live':
-                    new_player_lives -= 1
-                # Retain turn if blank shell
-                else:
-                    new_turn = 'player'
-            else:  # shoot_opponent
-                if current_shell == 'live':
-                    new_dealer_lives -= 1
-        else:  # dealer's turn
+                current_player_lives -= 1 if current_shell == 'live' else 0
+            else:
+                current_dealer_lives -= 1 if current_shell == 'live' else 0
+            current_turn = 'dealer'
+        else:
+            action = dealer_strategy(L, B, current_dealer_lives, current_player_lives)
             if action == 'shoot_self':
-                if current_shell == 'live':
-                    new_dealer_lives -= 1
-            else:  # shoot_opponent
-                if current_shell == 'live':
-                    new_player_lives -= 1
+                current_dealer_lives -= 1 if current_shell == 'live' else 0
+            else:
+                current_player_lives -= 1 if current_shell == 'live' else 0
+            current_turn = 'player'
 
-        simulate_game_states(
-            shell_order,
-            new_player_lives,
-            new_dealer_lives,
-            new_shell_index,
-            new_turn,
-            results,
-            path + [(current_turn, action, current_shell)]
-        )
+        shell_index += 1
 
+    if current_player_lives <= 0:
+        return 'dealer'
+    elif current_dealer_lives <= 0:
+        return 'player'
+    else:
+        return 'draw'
+
+# Main simulation loop
 def simulate_all_possible_games(
     live_shells,
     blank_shells,
     initial_player_lives,
-    initial_dealer_lives
+    initial_dealer_lives,
+    player_strategy,
+    dealer_strategy
 ):
     all_permutations = generate_all_permutations(live_shells, blank_shells)
-    total_results = {'player_wins': 0, 'dealer_wins': 0, 'draws': 0}
+    player_wins = dealer_wins = draws = 0
 
     for shell_order in all_permutations:
-        results = {'player_wins': 0, 'dealer_wins': 0, 'draws': 0}
-        # Start the game with both possible first turns
-        for first_turn in ['player', 'dealer']:
-            simulate_game_states(
-                shell_order,
-                initial_player_lives,
-                initial_dealer_lives,
-                0,
-                first_turn,
-                results
-            )
-        total_results['player_wins'] += results['player_wins']
-        total_results['dealer_wins'] += results['dealer_wins']
-        total_results['draws'] += results['draws']
+        result = simulate_game(
+            shell_order, initial_player_lives, initial_dealer_lives,
+            player_strategy, dealer_strategy
+        )
+        if result == 'player':
+            player_wins += 1
+        elif result == 'dealer':
+            dealer_wins += 1
+        else:
+            draws += 1
 
-    total_games = total_results['player_wins'] + total_results['dealer_wins'] + total_results['draws']
-    player_win_rate = total_results['player_wins'] / total_games * 100
-    dealer_win_rate = total_results['dealer_wins'] / total_games * 100
-    draw_rate = total_results['draws'] / total_games * 100
+    total_games = player_wins + dealer_wins + draws
+    player_win_rate = player_wins / total_games * 100
+    dealer_win_rate = dealer_wins / total_games * 100
+    draw_rate = draws / total_games * 100
 
     return {
         'player_win_rate': player_win_rate,
         'dealer_win_rate': dealer_win_rate,
         'draw_rate': draw_rate,
-        'total_results': total_results
+        'total_results': {'player_wins': player_wins, 'dealer_wins': dealer_wins, 'draws': draws}
     }
 
+# Streamlit app
 def main():
-    st.title("Buckshot Roulette Simulation with All Possible Permutations and Turns")
+    st.title("Buckshot Roulette Simulation with Different Play Styles")
 
     st.sidebar.header("Simulation Parameters")
     max_shells = 5  # Reduced for computational feasibility
@@ -119,13 +144,31 @@ def main():
     initial_player_lives = st.sidebar.slider("Player initial lives", min_value=1, max_value=5, value=2)
     initial_dealer_lives = st.sidebar.slider("Dealer initial lives", min_value=1, max_value=5, value=2)
 
+    st.sidebar.header("Strategy Selection")
+    player_strategy_option = st.sidebar.selectbox("Select Player Strategy", ("Aggressive", "Conservative", "Probability-Based"))
+    dealer_strategy_option = st.sidebar.selectbox("Select Dealer Strategy", ("Aggressive", "Conservative", "Probability-Based"))
+
+    # Assign selected strategies
+    player_strategies = {
+        'Aggressive': player_aggressive_strategy,
+        'Conservative': player_conservative_strategy,
+        'Probability-Based': player_probability_based_strategy
+    }
+    dealer_strategies = {
+        'Aggressive': dealer_aggressive_strategy,
+        'Conservative': dealer_conservative_strategy,
+        'Probability-Based': dealer_probability_based_strategy
+    }
+
+    selected_player_strategy = player_strategies[player_strategy_option]
+    selected_dealer_strategy = dealer_strategies[dealer_strategy_option]
+
+    # Run the simulation and display results
     if st.button("Run Simulation"):
         with st.spinner('Simulating...'):
             results = simulate_all_possible_games(
-                live_shells,
-                blank_shells,
-                initial_player_lives,
-                initial_dealer_lives
+                live_shells, blank_shells, initial_player_lives, initial_dealer_lives,
+                selected_player_strategy, selected_dealer_strategy
             )
         st.success('Simulation Complete!')
 
@@ -161,24 +204,6 @@ def main():
         st.write(f"Total Player Wins: **{results['total_results']['player_wins']}**")
         st.write(f"Total Dealer Wins: **{results['total_results']['dealer_wins']}**")
         st.write(f"Total Draws: **{results['total_results']['draws']}**")
-
-        # Additional detailed table
-        st.subheader("Detailed Results")
-        total_games = results['total_results']['player_wins'] + results['total_results']['dealer_wins'] + results['total_results']['draws']
-        detailed_data = pd.DataFrame({
-            'Outcome': ['Player Wins', 'Dealer Wins', 'Draws'],
-            'Count': [
-                results['total_results']['player_wins'],
-                results['total_results']['dealer_wins'],
-                results['total_results']['draws']
-            ],
-            'Percentage': [
-                results['player_win_rate'],
-                results['dealer_win_rate'],
-                results['draw_rate']
-            ]
-        })
-        st.dataframe(detailed_data)
 
 if __name__ == "__main__":
     main()
