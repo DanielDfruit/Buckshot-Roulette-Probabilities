@@ -19,22 +19,6 @@ dealer_strategy_descriptions = {
     'Random': 'Randomly choose to shoot self or the player.'
 }
 
-# Plot style for a black background
-def set_dark_theme():
-    plt.style.use('dark_background')
-    plt.rcParams['axes.facecolor'] = 'black'
-    plt.rcParams['figure.facecolor'] = 'black'
-    plt.rcParams['text.color'] = 'white'
-    plt.rcParams['axes.labelcolor'] = 'white'
-    plt.rcParams['xtick.color'] = 'white'
-    plt.rcParams['ytick.color'] = 'white'
-    plt.rcParams['legend.facecolor'] = 'black'
-    plt.rcParams['legend.edgecolor'] = 'white'
-    plt.rcParams['grid.color'] = '#444444'
-
-# Apply the dark theme to all plots
-set_dark_theme()
-
 # Strategy functions
 def player_aggressive_strategy(L, B, player_lives, dealer_lives):
     return 'shoot_dealer'
@@ -52,13 +36,19 @@ def player_probability_based_strategy(L, B, player_lives, dealer_lives):
     p_blank = B / (L + B)
     return 'shoot_self' if p_blank > p_live else 'shoot_dealer'
 
+# Enhanced dealer strategy function with AI behavior settings
 def dealer_dynamic_strategy(L, B, dealer_lives, player_lives, risk_tolerance, caution_level, bluff_factor):
     if np.random.rand() < bluff_factor:
-        return np.random.choice(['shoot_self', 'shoot_player'])
+        return np.random.choice(['shoot_self', 'shoot_player'])  # Random choice as a bluff
+
     if (L + B) == 0:
         return 'shoot_player'
+
     p_blank = B / (L + B)
-    return 'shoot_player' if (dealer_lives <= player_lives * risk_tolerance or p_blank <= caution_level) else 'shoot_self'
+    if dealer_lives <= player_lives * risk_tolerance:
+        return 'shoot_player' if np.random.rand() > p_blank else 'shoot_self'
+    else:
+        return 'shoot_self' if p_blank > caution_level else 'shoot_player'
 
 # Simulation functions
 def simulate_buckshot_game(
@@ -116,7 +106,11 @@ def simulate_single_game(
 
     while player_lives > 0 and dealer_lives > 0:
         if shell_index >= len(shells):
-            shells = ['live'] * live_shells + ['blank'] * blank_shells
+            # Ensure at least one live shell in each reload
+            live_count = max(1, live_shells)
+            blank_count = max(0, blank_shells - (live_count - live_shells))
+            
+            shells = ['live'] * live_count + ['blank'] * blank_count
             np.random.shuffle(shells)
             shell_index = 0
 
@@ -196,13 +190,7 @@ def main():
              - **Conservative**: Shoot themselves if there is a high probability of drawing a blank shell; otherwise, shoot the opponent.
              - **Probability-Based**: Based on the probability of live vs. blank shells, shoot themselves if the chance of a blank is higher.
 
-        5. **Outcome Determination**:
-           - A blank shell shot results in a missed turn but does not reduce lives.
-           - A live shell shot reduces the target’s lives by one.
-           - The simulation tracks the cumulative outcomes over the defined number of rounds.
-           - The game outcome is either a win for the player, a win for the Dealer, or a draw if neither loses all lives in the set rounds.
-
-        6. **Dealer AI Behavior Settings**:
+        5. **Dealer AI Behavior Settings**:
            - **Risk Tolerance**: Adjusts the Dealer’s aggressiveness based on relative lives. Higher values mean the Dealer will take more risks.
            - **Caution Level**: Dictates how likely the Dealer is to shoot themselves if there's a high chance of a blank shell.
            - **Bluff Factor**: Adds unpredictability by occasionally making the Dealer ignore probabilities and choose randomly.
@@ -222,9 +210,9 @@ def main():
         player_threshold = st.sidebar.slider("Player Conservative Threshold", min_value=0.0, max_value=1.0, value=0.7) if player_strategy_option == 'Conservative' else 0.7
 
         st.sidebar.header("Dealer AI Behavior Settings")
-        dealer_risk_tolerance = st.sidebar.slider("Dealer Risk Tolerance", min_value=0.0, max_value=1.0, value=0.5)
-        dealer_caution_level = st.sidebar.slider("Dealer Caution Level", min_value=0.0, max_value=1.0, value=0.7)
-        dealer_bluff_factor = st.sidebar.slider("Dealer Bluff Factor", min_value=0.0, max_value=1.0, value=0.1)
+        dealer_risk_tolerance = st.sidebar.slider("Dealer Risk Tolerance", min_value=0.0, max_value=1.0, value=0.5, help="Adjusts the Dealer’s aggressiveness based on relative lives. Higher values mean the Dealer will take more risks.")
+        dealer_caution_level = st.sidebar.slider("Dealer Caution Level", min_value=0.0, max_value=1.0, value=0.7, help="Determines the likelihood of the Dealer shooting themselves if a blank shell is likely.")
+        dealer_bluff_factor = st.sidebar.slider("Dealer Bluff Factor", min_value=0.0, max_value=1.0, value=0.1, help="Adds unpredictability by occasionally making the Dealer choose randomly.")
 
         # Assign selected strategies
         player_strategies = {
@@ -253,11 +241,13 @@ def main():
             p_blank = [prob['p_blank'] for prob in avg_prob_trend]
 
             fig, ax = plt.subplots()
-            ax.plot(turns, p_live, label='Probability of Live Shell', marker='o', color='blue')
-            ax.plot(turns, p_blank, label='Probability of Blank Shell', marker='o', color='orange')
+            ax.plot(turns, p_live, label='Probability of Live Shell', color="blue", marker='o')
+            ax.plot(turns, p_blank, label='Probability of Blank Shell', color="orange", marker='o')
             ax.set_xlabel("Turn Number")
             ax.set_ylabel("Probability")
             ax.legend()
+            fig.patch.set_facecolor('black')
+            ax.set_facecolor('black')
             st.pyplot(fig)
 
             # Win Rate Heatmap for Strategy Combinations
@@ -281,6 +271,8 @@ def main():
             sns.heatmap(heatmap_data, annot=True, fmt=".2f", cmap="coolwarm", ax=ax)
             ax.set_xlabel("Dealer Strategy")
             ax.set_ylabel("Player Strategy")
+            fig.patch.set_facecolor('black')
+            ax.set_facecolor('black')
             st.pyplot(fig)
 
             # Cumulative Win Rate Plot
@@ -317,6 +309,8 @@ def main():
             ax.set_xlabel("Number of Simulations")
             ax.set_ylabel("Cumulative Win Rate (%)")
             ax.legend()
+            fig.patch.set_facecolor('black')
+            ax.set_facecolor('black')
             st.pyplot(fig)
 
 if __name__ == "__main__":
