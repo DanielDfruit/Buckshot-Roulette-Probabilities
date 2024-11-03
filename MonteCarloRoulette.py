@@ -117,11 +117,15 @@ def simulate_all_possible_games(
     player_strategy,
     dealer_strategy
 ):
+    optimal_first_play = {}
     all_permutations = generate_all_permutations(live_shells, blank_shells)
     player_wins = dealer_wins = draws = 0
     detailed_logs = []
 
     for shell_order in all_permutations:
+        # Track the optimal first play
+        if shell_order not in optimal_first_play:
+            optimal_first_play[shell_order] = {'player': 0, 'dealer': 0}
         result, game_log = simulate_game(
             shell_order, initial_player_lives, initial_dealer_lives,
             player_strategy, dealer_strategy
@@ -129,8 +133,10 @@ def simulate_all_possible_games(
         detailed_logs.append((shell_order, game_log))
         if result == 'player':
             player_wins += 1
+            optimal_first_play[shell_order]['player'] += 1
         elif result == 'dealer':
             dealer_wins += 1
+            optimal_first_play[shell_order]['dealer'] += 1
         else:
             draws += 1
 
@@ -140,6 +146,7 @@ def simulate_all_possible_games(
     draw_rate = draws / total_games * 100
 
     return {
+        'optimal_first_play': optimal_first_play,
         'player_win_rate': player_win_rate,
         'dealer_win_rate': dealer_win_rate,
         'draw_rate': draw_rate,
@@ -223,6 +230,9 @@ def main():
         st.write(f"Total Draws: **{results['total_results']['draws']}**")
 
         # Display detailed logs for each game
+        st.subheader("Optimal First Play")
+        for shell_order, outcomes in results['optimal_first_play'].items():
+            st.write(f"Shell Order: {shell_order}, Player Wins: {outcomes['player']}, Dealer Wins: {outcomes['dealer']}")
         st.subheader("Detailed Game Outcomes")
         for shell_order, log in results['detailed_logs']:
             st.write(f"Shell Order: {shell_order}")
@@ -232,7 +242,6 @@ def main():
 
 if __name__ == "__main__":
     main()
-
 
 if __name__ == "__main__":
     main()
