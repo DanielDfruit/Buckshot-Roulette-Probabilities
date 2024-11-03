@@ -104,7 +104,7 @@ def generate_sample_permutations(live_shells, blank_shells, sample_size=100):
     return random.sample(all_perms, min(sample_size, len(all_perms)))  # Use set to avoid duplicate permutations
 
 # Simulation functions
-def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy, dealer_strategy, graph, parent_node, results):
+def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy, dealer_strategy, graph, parent_node, results, cumulative_probability=1.0):
     current_player_lives = player_lives
     current_dealer_lives = dealer_lives
     shell_index = 0
@@ -115,11 +115,18 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
         L = shell_order[shell_index:].count('live')
         B = shell_order[shell_index:].count('blank')
 
+        # Calculate the current shell probability
+        if (L + B) > 0:
+            shell_probability = 1 / (L + B)
+        else:
+            shell_probability = 1.0
+
         if current_turn == 'player':
             action = player_strategy(L, B, current_player_lives, current_dealer_lives)
             node_id = f"{parent_node}-{shell_index}-{current_turn}-{action}"
-            graph.add_node(node_id, label=f"Player: {action}, Shell: {current_shell}")
-            graph.add_edge(parent_node, node_id)
+            label = f"Player: {action}, Shell: {current_shell}, Prob: {cumulative_probability:.2f}"
+            graph.add_node(node_id, label=label)
+            graph.add_edge(parent_node, node_id, label=f"P={shell_probability:.2f}")
 
             if action == 'shoot_self' and current_shell == 'live':
                 current_player_lives -= 1
@@ -131,8 +138,9 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
         else:
             action = dealer_strategy(L, B, current_dealer_lives, current_player_lives)
             node_id = f"{parent_node}-{shell_index}-{current_turn}-{action}"
-            graph.add_node(node_id, label=f"Dealer: {action}, Shell: {current_shell}")
-            graph.add_edge(parent_node, node_id)
+            label = f"Dealer: {action}, Shell: {current_shell}, Prob: {cumulative_probability:.2f}"
+            graph.add_node(node_id, label=label)
+            graph.add_edge(parent_node, node_id, label=f"P={shell_probability:.2f}")
 
             if action == 'shoot_self' and current_shell == 'live':
                 current_dealer_lives -= 1
@@ -142,6 +150,8 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
             parent_node = node_id
             current_turn = 'player'
 
+        # Update cumulative probability
+        cumulative_probability *= shell_probability
         shell_index += 1
 
     # Final result
@@ -155,9 +165,8 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
     else:
         graph.add_node(result_node, label="Draw", color="gray")
         results['draws'] += 1
-    
-    graph.add_edge(parent_node, result_node)
 
+    graph.add_edge(parent_node, result_node)
 # Visualize paths with PyVis
 import os
 
@@ -166,6 +175,12 @@ import base64
 def visualize_game_paths(graph):
     net = Network(notebook=False, height="750px", width="100%", cdn_resources='local')
     net.from_nx(graph)
+
+    # Modify edges to include probability labels if available
+    for u, v, data in graph.edges(data=True):
+        if 'label' in data:
+            net.get_edge(u, v)['title'] = data['label']
+
     output_path = os.path.join(os.getcwd(), "game_paths.html")
 
     try:
@@ -184,7 +199,7 @@ def visualize_game_paths(graph):
     except Exception as e:
         st.error(f"Error generating visualization: {e}")
         st.write("Make sure that the directory is writable and the environment supports HTML generation.")
-      
+
 # Main simulation loop
 def simulate_all_possible_games(
     live_shells,
@@ -252,7 +267,35 @@ def main():
         st.write(f"Player Wins: {results['player_wins']}")
         st.write(f"Dealer Wins: {results['dealer_wins']}")
         st.write(f"Draws: {results['draws']}")
-        st.markdown(f"[View Game Paths](game_paths.html)", unsafe_allow_html=True)
+
+        # Additional charts
+        # Bar chart of outcomes
+        outcome_data = pd.DataFrame({
+            'Outcome': ['Player Wins', 'Dealer Wins', 'Draws'],
+            'Count': [results['player_wins'], results['dealer_wins'], results['draws']]
+        })
+        outcome_chart = alt.Chart(outcome_data).mark_bar().encode(
+            x='Outcome',
+            y='Count',
+            color='Outcome'
+        ).properties(
+            title='Simulation Outcomes'
+        )
+        st.altair_chart(outcome_chart, use_container_width=True)
+
+        # Pie chart of outcomes
+        outcome_pie_chart = alt.Chart(outcome_data).mark_arc().encode(
+            theta=alt.Theta(field='Count', type='quantitative'),
+            color=alt.Color(field='Outcome', type='nominal'),
+            tooltip=['Outcome', 'Count']
+        ).properties(
+            title='Outcome Distribution'
+        )
+        st.altair_chart(outcome_pie_chart, use_container_width=True)
+        
+
+if __name__ == "__main__":
+    main()
 
 if __name__ == "__main__":
     main()
