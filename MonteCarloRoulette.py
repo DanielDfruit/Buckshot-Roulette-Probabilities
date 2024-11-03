@@ -161,7 +161,7 @@ def simulate_game_graph(shell_order, player_lives, dealer_lives, player_strategy
 # Visualize paths with PyVis
 import os
 
-import os
+import base64
 
 def visualize_game_paths(graph):
     net = Network(notebook=False, height="750px", width="100%", cdn_resources='local')
@@ -171,13 +171,20 @@ def visualize_game_paths(graph):
     try:
         net.write_html(output_path, notebook=False)
         if os.path.exists(output_path):
-            st.markdown(f"[View Game Paths]({output_path})", unsafe_allow_html=True)
+            # Read the HTML file
+            with open(output_path, 'r', encoding='utf-8') as f:
+                html_content = f.read()
+
+            # Embed HTML in an iframe using base64 encoding
+            b64 = base64.b64encode(html_content.encode()).decode()
+            iframe_code = f'<iframe src="data:text/html;base64,{b64}" width="100%" height="750px"></iframe>'
+            st.markdown(iframe_code, unsafe_allow_html=True)
         else:
             st.error("Failed to generate game paths visualization.")
     except Exception as e:
         st.error(f"Error generating visualization: {e}")
         st.write("Make sure that the directory is writable and the environment supports HTML generation.")
-
+      
 # Main simulation loop
 def simulate_all_possible_games(
     live_shells,
@@ -249,4 +256,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
